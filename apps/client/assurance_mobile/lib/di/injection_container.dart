@@ -84,11 +84,4 @@ Future<void> init() async {
   sl.registerFactory<CreateInsuranceBloc>(
     () => CreateInsuranceBloc(createInsuranceAccount: sl()),
   );
-
-  sl.registerFactory<OnboardingBloc>(
-    () => OnboardingBloc(
-      getSeen: sl<GetOnboardingSeen>(),
-      saveSeen: sl<SaveOnboardingSeen>(),
-    ),
-  );
 }
