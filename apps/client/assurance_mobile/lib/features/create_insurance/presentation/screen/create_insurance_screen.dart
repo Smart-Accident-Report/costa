@@ -12,17 +12,17 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
     with TickerProviderStateMixin {
   final _pageController = PageController();
   final _formKeys = List.generate(3, (index) => GlobalKey<FormState>());
-  
+
   int _currentStep = 0;
-  
+
   // Document scanning states
   bool _carteGriseScanned = false;
   bool _drivingLicenseScanned = false;
-  
+
   // Extracted data from documents
   Map<String, dynamic> _extractedCarData = {};
   Map<String, dynamic> _extractedDriverData = {};
-  
+
   // User input data
   String? _selectedPuissanceMoteur;
   String? _selectedNombrePlaces;
@@ -37,7 +37,7 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
   bool _paymentCCP = false;
   bool _isUnder25 = false;
   bool _isPermitOverAYear = false;
-  
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -103,7 +103,8 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -122,8 +123,8 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                 Text(
                   'Votre demande d\'assurance a été soumise avec succès. Vous recevrez une confirmation par email.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).textTheme.bodySmall?.color,
-                  ),
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                      ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
@@ -152,7 +153,7 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
         builder: (context) => CameraScanScreen(documentType: documentType),
       ),
     );
-    
+
     if (result != null) {
       setState(() {
         if (documentType == 'carte_grise') {
@@ -168,7 +169,7 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
           _extractedDriverData = result;
         }
       });
-      
+
       // Show success feedback
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -200,7 +201,7 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
           ...List.generate(3, (index) {
             final isActive = _currentStep >= index;
             //final isCurrent = _currentStep == index;
-            
+
             return Expanded(
               child: Row(
                 children: [
@@ -210,9 +211,9 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                       height: 4,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(2),
-                        color: isActive 
-                          ? Theme.of(context).colorScheme.primary 
-                          : Theme.of(context).dividerColor,
+                        color: isActive
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).dividerColor,
                       ),
                     ),
                   ),
@@ -246,19 +247,19 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isScanned 
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).dividerColor,
+                color: isScanned
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).dividerColor,
                 width: isScanned ? 2 : 1,
               ),
               gradient: isScanned
-                ? LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                      Theme.of(context).colorScheme.primary.withOpacity(0.05),
-                    ],
-                  )
-                : null,
+                  ? LinearGradient(
+                      colors: [
+                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                      ],
+                    )
+                  : null,
             ),
             child: Row(
               children: [
@@ -266,16 +267,16 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: isScanned 
-                      ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
-                      : Theme.of(context).cardColor,
+                    color: isScanned
+                        ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+                        : Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     isScanned ? Icons.check_circle : icon,
-                    color: isScanned 
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).textTheme.bodyLarge?.color,
+                    color: isScanned
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).textTheme.bodyLarge?.color,
                     size: 24,
                   ),
                 ),
@@ -286,9 +287,10 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                     children: [
                       Text(
                         title,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -388,22 +390,22 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: value 
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).dividerColor,
+                      color: value
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).dividerColor,
                       width: 2,
                     ),
-                    color: value 
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.transparent,
+                    color: value
+                        ? Theme.of(context).colorScheme.primary
+                        : Colors.transparent,
                   ),
                   child: value
-                    ? Icon(
-                        Icons.check,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.onPrimary,
-                      )
-                    : null,
+                      ? Icon(
+                          Icons.check,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        )
+                      : null,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -432,8 +434,8 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
               Text(
                 'Informations du véhicule',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                      fontWeight: FontWeight.w700,
+                    ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -441,7 +443,7 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 24),
-              
+
               // Scan button
               _buildScanButton(
                 title: 'Scanner la carte grise',
@@ -450,80 +452,101 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                 onTap: () => _scanDocument('carte_grise'),
                 isScanned: _carteGriseScanned,
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Manual input fields
               _buildCustomDropdown(
                 label: 'Puissance Moteur',
-                items: ['3-4cv', '5-6cv', '7-10cv', '11-14cv', '15-23 cv', '24cv+'],
+                items: [
+                  '3-4cv',
+                  '5-6cv',
+                  '7-10cv',
+                  '11-14cv',
+                  '15-23 cv',
+                  '24cv+'
+                ],
                 value: _selectedPuissanceMoteur,
-                onChanged: (value) => setState(() => _selectedPuissanceMoteur = value),
-                validator: (value) => value == null ? 'Veuillez sélectionner une puissance' : null,
+                onChanged: (value) =>
+                    setState(() => _selectedPuissanceMoteur = value),
+                validator: (value) => value == null
+                    ? 'Veuillez sélectionner une puissance'
+                    : null,
               ),
-              
+
               _buildCustomDropdown(
                 label: 'Nombre de places',
                 items: ['3', '4', '5', '7'],
                 value: _selectedNombrePlaces,
-                onChanged: (value) => setState(() => _selectedNombrePlaces = value),
-                validator: (value) => value == null ? 'Veuillez sélectionner le nombre de places' : null,
+                onChanged: (value) =>
+                    setState(() => _selectedNombrePlaces = value),
+                validator: (value) => value == null
+                    ? 'Veuillez sélectionner le nombre de places'
+                    : null,
               ),
-              
+
               _buildCustomTextField(
                 label: 'Marque',
                 initialValue: _selectedMarque ?? _extractedCarData['marque'],
                 onSaved: (value) => _selectedMarque = value,
-                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir la marque' : null,
+                validator: (value) =>
+                    value?.isEmpty == true ? 'Veuillez saisir la marque' : null,
               ),
-              
+
               _buildCustomTextField(
                 label: 'Modèle',
                 initialValue: _selectedModele ?? _extractedCarData['modele'],
                 onSaved: (value) => _selectedModele = value,
-                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir le modèle' : null,
+                validator: (value) =>
+                    value?.isEmpty == true ? 'Veuillez saisir le modèle' : null,
               ),
-              
+
               _buildCustomTextField(
                 label: 'Année',
                 initialValue: _selectedAnnee ?? _extractedCarData['annee'],
                 keyboardType: TextInputType.number,
                 onSaved: (value) => _selectedAnnee = value,
-                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir l\'année' : null,
+                validator: (value) =>
+                    value?.isEmpty == true ? 'Veuillez saisir l\'année' : null,
               ),
-              
+
               _buildCustomTextField(
                 label: 'Valeur vénale du véhicule',
                 keyboardType: TextInputType.number,
-                onSaved: (value) => _valeurVenale = double.tryParse(value ?? ''),
-                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir la valeur vénale' : null,
+                onSaved: (value) =>
+                    _valeurVenale = double.tryParse(value ?? ''),
+                validator: (value) => value?.isEmpty == true
+                    ? 'Veuillez saisir la valeur vénale'
+                    : null,
               ),
-              
+
               _buildCustomTextField(
                 label: 'Wilaya',
                 initialValue: _selectedWilaya ?? _extractedCarData['wilaya'],
                 onSaved: (value) => _selectedWilaya = value,
-                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir la wilaya' : null,
+                validator: (value) =>
+                    value?.isEmpty == true ? 'Veuillez saisir la wilaya' : null,
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               _buildCustomCheckbox(
                 title: 'Paiement par facilité (CCP)',
                 value: _paymentCCP,
                 onChanged: (value) => setState(() => _paymentCCP = value!),
               ),
-              
+
               _buildCustomCheckbox(
                 title: 'Avez-vous moins de 25 ans ?',
                 value: _isUnder25,
                 onChanged: (value) => setState(() => _isUnder25 = value!),
               ),
-              
+
               _buildCustomCheckbox(
                 title: 'Âge de permis plus d\'une année ?',
                 value: _isPermitOverAYear,
-                onChanged: (value) => setState(() => _isPermitOverAYear = value!),
+                onChanged: (value) =>
+                    setState(() => _isPermitOverAYear = value!),
               ),
             ],
           ),
@@ -544,8 +567,8 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
               Text(
                 'Type d\'assistance',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                      fontWeight: FontWeight.w700,
+                    ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -553,7 +576,7 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 32),
-              
+
               _buildCustomDropdown(
                 label: 'Formule d\'assistance',
                 items: [
@@ -562,18 +585,21 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                   'Formule Liberté'
                 ],
                 value: _selectedAssistanceType,
-                onChanged: (value) => setState(() => _selectedAssistanceType = value),
-                validator: (value) => value == null ? 'Veuillez sélectionner une formule' : null,
+                onChanged: (value) =>
+                    setState(() => _selectedAssistanceType = value),
+                validator: (value) =>
+                    value == null ? 'Veuillez sélectionner une formule' : null,
               ),
-              
+
               _buildCustomDropdown(
                 label: 'Durée',
                 items: ['6 mois', '1 année'],
                 value: _selectedDuree,
                 onChanged: (value) => setState(() => _selectedDuree = value),
-                validator: (value) => value == null ? 'Veuillez sélectionner une durée' : null,
+                validator: (value) =>
+                    value == null ? 'Veuillez sélectionner une durée' : null,
               ),
-              
+
               // Insurance formula cards
               const SizedBox(height: 24),
               _buildFormulaCard(
@@ -581,23 +607,34 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                 'Couverture de base avec assistance 24h/7j',
                 ['Dépannage', 'Remorquage', 'Assistance juridique'],
                 _selectedAssistanceType == 'Formule Tranquillité',
-                () => setState(() => _selectedAssistanceType = 'Formule Tranquillité'),
+                () => setState(
+                    () => _selectedAssistanceType = 'Formule Tranquillité'),
               ),
-              
+
               _buildFormulaCard(
                 'Tranquillité Plus',
                 'Couverture étendue avec services premium',
-                ['Tous services Tranquillité', 'Véhicule de remplacement', 'Rapatriement'],
+                [
+                  'Tous services Tranquillité',
+                  'Véhicule de remplacement',
+                  'Rapatriement'
+                ],
                 _selectedAssistanceType == 'Formule Tranquillité Plus',
-                () => setState(() => _selectedAssistanceType = 'Formule Tranquillité Plus'),
+                () => setState(() =>
+                    _selectedAssistanceType = 'Formule Tranquillité Plus'),
               ),
-              
+
               _buildFormulaCard(
                 'Liberté',
                 'Couverture complète tous risques',
-                ['Tous services précédents', 'Vol et incendie', 'Bris de glace'],
+                [
+                  'Tous services précédents',
+                  'Vol et incendie',
+                  'Bris de glace'
+                ],
                 _selectedAssistanceType == 'Formule Liberté',
-                () => setState(() => _selectedAssistanceType = 'Formule Liberté'),
+                () =>
+                    setState(() => _selectedAssistanceType = 'Formule Liberté'),
               ),
             ],
           ),
@@ -606,7 +643,8 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
     );
   }
 
-  Widget _buildFormulaCard(String title, String description, List<String> features, bool isSelected, VoidCallback onTap) {
+  Widget _buildFormulaCard(String title, String description,
+      List<String> features, bool isSelected, VoidCallback onTap) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Material(
@@ -620,19 +658,19 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: isSelected 
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).dividerColor,
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).dividerColor,
                 width: isSelected ? 2 : 1,
               ),
               gradient: isSelected
-                ? LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                      Theme.of(context).colorScheme.primary.withOpacity(0.05),
-                    ],
-                  )
-                : null,
+                  ? LinearGradient(
+                      colors: [
+                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                      ],
+                    )
+                  : null,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -643,8 +681,8 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                       child: Text(
                         title,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                     ),
                     AnimatedContainer(
@@ -654,22 +692,22 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isSelected 
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).dividerColor,
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context).dividerColor,
                           width: 2,
                         ),
-                        color: isSelected 
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.transparent,
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.transparent,
                       ),
                       child: isSelected
-                        ? Icon(
-                            Icons.check,
-                            size: 16,
-                            color: Theme.of(context).colorScheme.onPrimary,
-                          )
-                        : null,
+                          ? Icon(
+                              Icons.check,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                            )
+                          : null,
                     ),
                   ],
                 ),
@@ -680,22 +718,22 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                 ),
                 const SizedBox(height: 12),
                 ...features.map((feature) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.check_circle_outline,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.primary,
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle_outline,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            feature,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        feature,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                )),
+                    )),
               ],
             ),
           ),
@@ -716,8 +754,8 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
               Text(
                 'Informations du conducteur',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                      fontWeight: FontWeight.w700,
+                    ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -725,7 +763,7 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 24),
-              
+
               // Scan button
               _buildScanButton(
                 title: 'Scanner le permis de conduire',
@@ -734,71 +772,89 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                 onTap: () => _scanDocument('permis_conduire'),
                 isScanned: _drivingLicenseScanned,
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               _buildCustomTextField(
                 label: 'Nom',
                 initialValue: _extractedDriverData['nom'],
                 onSaved: (value) => _extractedDriverData['nom'] = value,
-                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir le nom' : null,
+                validator: (value) =>
+                    value?.isEmpty == true ? 'Veuillez saisir le nom' : null,
               ),
-              
+
               _buildCustomTextField(
                 label: 'Prénom',
                 initialValue: _extractedDriverData['prenom'],
                 onSaved: (value) => _extractedDriverData['prenom'] = value,
-                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir le prénom' : null,
+                validator: (value) =>
+                    value?.isEmpty == true ? 'Veuillez saisir le prénom' : null,
               ),
-              
+
               _buildCustomTextField(
                 label: 'Date de naissance',
                 initialValue: _extractedDriverData['date_naissance'],
-                onSaved: (value) => _extractedDriverData['date_naissance'] = value,
-                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir la date de naissance' : null,
+                onSaved: (value) =>
+                    _extractedDriverData['date_naissance'] = value,
+                validator: (value) => value?.isEmpty == true
+                    ? 'Veuillez saisir la date de naissance'
+                    : null,
               ),
-              
+
               _buildCustomTextField(
                 label: 'Numéro de permis',
                 initialValue: _extractedDriverData['num_permis'],
                 onSaved: (value) => _extractedDriverData['num_permis'] = value,
-                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir le numéro de permis' : null,
+                validator: (value) => value?.isEmpty == true
+                    ? 'Veuillez saisir le numéro de permis'
+                    : null,
               ),
-              
+
               _buildCustomTextField(
                 label: 'Date de permis',
                 initialValue: _extractedDriverData['date_permis'],
                 onSaved: (value) => _extractedDriverData['date_permis'] = value,
-                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir la date de permis' : null,
+                validator: (value) => value?.isEmpty == true
+                    ? 'Veuillez saisir la date de permis'
+                    : null,
               ),
-              
+
               _buildCustomTextField(
                 label: 'Type de permis',
                 initialValue: _extractedDriverData['type_permis'],
                 onSaved: (value) => _extractedDriverData['type_permis'] = value,
-                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir le type de permis' : null,
+                validator: (value) => value?.isEmpty == true
+                    ? 'Veuillez saisir le type de permis'
+                    : null,
               ),
-              
+
               _buildCustomTextField(
                 label: 'Numéro de châssis',
                 initialValue: _extractedCarData['num_chassis'],
                 onSaved: (value) => _extractedCarData['num_chassis'] = value,
-                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir le numéro de châssis' : null,
+                validator: (value) => value?.isEmpty == true
+                    ? 'Veuillez saisir le numéro de châssis'
+                    : null,
               ),
-              
+
               _buildCustomTextField(
                 label: 'Énergie',
                 initialValue: _extractedCarData['energie'],
                 onSaved: (value) => _extractedCarData['energie'] = value,
-                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir l\'énergie' : null,
+                validator: (value) => value?.isEmpty == true
+                    ? 'Veuillez saisir l\'énergie'
+                    : null,
               ),
-              
+
               _buildCustomDropdown(
                 label: 'Type de matricule',
                 items: ['provisoire', 'permanent 11 digits', '10 digits'],
                 value: _extractedCarData['type_matricule'],
-                onChanged: (value) => setState(() => _extractedCarData['type_matricule'] = value),
-                validator: (value) => value == null ? 'Veuillez sélectionner le type de matricule' : null,
+                onChanged: (value) =>
+                    setState(() => _extractedCarData['type_matricule'] = value),
+                validator: (value) => value == null
+                    ? 'Veuillez sélectionner le type de matricule'
+                    : null,
               ),
             ],
           ),
@@ -814,8 +870,8 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
         title: Text(
           'Créer une assurance',
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+                fontWeight: FontWeight.w600,
+              ),
         ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
@@ -825,8 +881,8 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                 onPressed: _previousStep,
               )
             : IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.security),
+                onPressed: () {},
               ),
       ),
       body: SafeArea(
@@ -862,7 +918,8 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                       child: OutlinedButton(
                         onPressed: _previousStep,
                         style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
                         child: const Text('Précédent'),
                       ),
                     ),
