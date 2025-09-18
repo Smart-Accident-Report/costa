@@ -4,15 +4,6 @@ import 'package:http/http.dart' as http;
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../core/network/network_info.dart';
-import '../features/auth/domain/repositories/auth_repository.dart';
-import '../features/auth/domain/usecases/clear_token.dart';
-import '../features/auth/domain/usecases/foget_password.dart';
-import '../features/auth/domain/usecases/get_current_user.dart';
-import '../features/auth/domain/usecases/get_token.dart';
-import '../features/auth/domain/usecases/login_user.dart';
-import '../features/auth/domain/usecases/reset_password.dart';
-import '../features/auth/domain/usecases/save_token.dart';
-import '../features/auth/domain/usecases/signup_user.dart';
 import '../features/onboarding/data/repositories/onboarding_repository_impl.dart';
 import '../features/onboarding/domain/repositories/onboarding_repository.dart';
 import '../features/onboarding/domain/usecases/get_onboarding_seen.dart';
@@ -41,23 +32,6 @@ Future<void> init() async {
     ),
   );
 
-  
-
-  
-
-  // Auth Use Cases
-  sl.registerLazySingleton<LoginUser>(() => LoginUser(sl<AuthRepository>()));
-  sl.registerLazySingleton<SignupUser>(() => SignupUser(sl<AuthRepository>()));
-  sl.registerLazySingleton<SaveToken>(() => SaveToken(sl<AuthRepository>()));
-  sl.registerLazySingleton<GetToken>(() => GetToken(sl<AuthRepository>()));
-  sl.registerLazySingleton<ClearToken>(() => ClearToken(sl<AuthRepository>()));
-  sl.registerLazySingleton<GetCurrentUser>(
-      () => GetCurrentUser(sl<AuthRepository>()));
-  sl.registerLazySingleton<ForgetPasswordUser>(
-      () => ForgetPasswordUser(sl<AuthRepository>()));
-  sl.registerLazySingleton<ResetPasswordUser>(
-      () => ResetPasswordUser(sl<AuthRepository>()));
-
   // Onboarding Repository
   sl.registerLazySingleton<OnboardingRepository>(
     () => OnboardingRepositoryImpl(sl<SharedPreferences>()),
@@ -71,7 +45,7 @@ Future<void> init() async {
 
   // Splash Use Cases
   sl.registerLazySingleton<IsUserLoggedIn>(
-    () => IsUserLoggedIn(sl<AuthRepository>()),
+    () => IsUserLoggedIn(),
   );
   
 
