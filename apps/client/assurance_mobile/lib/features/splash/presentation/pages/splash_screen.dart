@@ -125,9 +125,9 @@ class _SplashScreenState extends State<SplashScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFFF8F9FA), // Light gray-white
-              Color(0xFFFFFFFF), // Pure white
-              Color(0xFFF0F8F0), // Very light green tint
+              Color(0xFF0F1419), // Dark background from theme
+              Color(0xFF1E2A32), // Surface color
+              Color(0xFF253339), // Card color
             ],
             stops: [0.0, 0.6, 1.0],
           ),
@@ -148,8 +148,7 @@ class _SplashScreenState extends State<SplashScreen>
                           color: Colors.white,
                         ),
                   ),
-                  backgroundColor:
-                      const Color(0xFFD32F2F), // Error color from theme
+                  backgroundColor: const Color(0xFFFF4757), // Error color from theme
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -189,15 +188,15 @@ class _SplashScreenState extends State<SplashScreen>
                                       borderRadius: BorderRadius.circular(40),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: const Color(0xFF2E7D32)
-                                              .withOpacity(0.15),
+                                          color: const Color(0xFF00D084)
+                                              .withOpacity(0.25),
                                           blurRadius: 30,
                                           spreadRadius: 5,
                                           offset: const Offset(0, 8),
                                         ),
                                         BoxShadow(
-                                          color: const Color(0xFF4CAF50)
-                                              .withOpacity(0.1),
+                                          color: const Color(0xFF00B872)
+                                              .withOpacity(0.15),
                                           blurRadius: 60,
                                           spreadRadius: 10,
                                           offset: const Offset(0, 4),
@@ -234,23 +233,21 @@ class _SplashScreenState extends State<SplashScreen>
                                       vertical: 8,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(
-                                          0xFFE8F5E8), // Light green background
+                                      color: const Color(0xFF253339), // Card color from theme
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(
-                                        color: const Color(0xFF4CAF50)
+                                        color: const Color(0xFF00D084)
                                             .withOpacity(0.3),
                                         width: 1,
                                       ),
                                     ),
                                     child: Text(
-                                      'Livres Médicaux pour Étudiants',
+                                      'Assurance Auto Intelligente',
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleMedium
                                           ?.copyWith(
-                                            color: const Color(
-                                                0xFF1B5E20), // Dark green
+                                            color: const Color(0xFF00D084), // Primary color
                                             fontWeight: FontWeight.w600,
                                             letterSpacing: 0.3,
                                           ),
@@ -258,13 +255,12 @@ class _SplashScreenState extends State<SplashScreen>
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Imprimerie & Édition Académique',
+                                    'Constat d\'accident simplifié',
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodyMedium
                                         ?.copyWith(
-                                          color: const Color(
-                                              0xFF5A5A5A), // Secondary text
+                                          color: const Color(0xFFE0E6ED), // Secondary text color
                                           letterSpacing: 0.2,
                                         ),
                                   ),
@@ -287,20 +283,20 @@ class _SplashScreenState extends State<SplashScreen>
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    // Academic-themed progress indicator
+                                    // Insurance-themed progress indicator
                                     Container(
                                       padding: const EdgeInsets.all(20),
                                       decoration: BoxDecoration(
-                                        color: Colors.white,
+                                        color: const Color(0xFF1E2A32), // Surface color
                                         borderRadius: BorderRadius.circular(25),
                                         border: Border.all(
-                                          color: const Color(0xFF4CAF50)
+                                          color: const Color(0xFF00D084)
                                               .withOpacity(0.2),
                                           width: 2,
                                         ),
                                         boxShadow: [
                                           BoxShadow(
-                                            color: const Color(0xFF2E7D32)
+                                            color: const Color(0xFF00B872)
                                                 .withOpacity(0.1),
                                             blurRadius: 20,
                                             spreadRadius: 2,
@@ -315,33 +311,33 @@ class _SplashScreenState extends State<SplashScreen>
                                           strokeWidth: 3,
                                           valueColor:
                                               AlwaysStoppedAnimation<Color>(
-                                            Color(0xFF2E7D32), // Primary green
+                                            Color(0xFF00D084), // Primary green
                                           ),
                                         ),
                                       ),
                                     ),
                                     const SizedBox(height: 24),
 
-                                    // Loading text with academic feel
+                                    // Loading text with insurance feel
                                     Text(
-                                      'Préparation de votre bibliothèque...',
+                                      'Initialisation de votre protection...',
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyMedium
                                           ?.copyWith(
-                                            color: const Color(0xFF5A5A5A),
+                                            color: const Color(0xFFE0E6ED), // Primary text
                                             letterSpacing: 0.3,
                                             fontWeight: FontWeight.w500,
                                           ),
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      'Accès aux ressources médicales',
+                                      'Sécurisation de vos données',
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodySmall
                                           ?.copyWith(
-                                            color: const Color(0xFF9E9E9E),
+                                            color: const Color(0xFF8A9BA8), // Hint text
                                             letterSpacing: 0.2,
                                           ),
                                     ),
@@ -365,19 +361,19 @@ class _SplashScreenState extends State<SplashScreen>
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(
-                                    Icons.school,
+                                    Icons.security,
                                     size: 16,
-                                    color: const Color(0xFF4CAF50)
+                                    color: const Color(0xFF00D084)
                                         .withOpacity(0.8),
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Fait pour les étudiants en médecine',
+                                    'Votre sécurité, notre priorité',
                                     style: Theme.of(context)
                                         .textTheme
                                         .labelSmall
                                         ?.copyWith(
-                                          color: const Color(0xFF9E9E9E),
+                                          color: const Color(0xFF8A9BA8),
                                           letterSpacing: 0.5,
                                         ),
                                   ),
