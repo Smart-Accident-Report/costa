@@ -4,6 +4,11 @@ import 'package:http/http.dart' as http;
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../core/network/network_info.dart';
+import '../features/create_insurance/data/data_souce/create_insurance_remote_data_source.dart';
+import '../features/create_insurance/data/repositories/create_insurance_repository_impl.dart';
+import '../features/create_insurance/domain/repositories/create_insurance_repository.dart';
+import '../features/create_insurance/domain/usecases/create_insurance_usecase.dart';
+import '../features/create_insurance/presentation/bloc/create_insurance_bloc.dart';
 import '../features/onboarding/data/repositories/onboarding_repository_impl.dart';
 import '../features/onboarding/domain/repositories/onboarding_repository.dart';
 import '../features/onboarding/domain/usecases/get_onboarding_seen.dart';
@@ -47,10 +52,6 @@ Future<void> init() async {
   sl.registerLazySingleton<IsUserLoggedIn>(
     () => IsUserLoggedIn(),
   );
-  
-
-  
-  
 
   sl.registerFactory<OnboardingBloc>(
     () => OnboardingBloc(
@@ -63,6 +64,31 @@ Future<void> init() async {
     () => SplashBloc(
       getOnboardingSeen: sl<GetOnboardingSeen>(),
       isUserLoggedIn: sl<IsUserLoggedIn>(),
+    ),
+  );
+  sl.registerLazySingleton<CreateInsuranceRemoteDataSource>(
+    () => CreateInsuranceRemoteDataSourceImpl(),
+  );
+
+  // Repository
+  sl.registerLazySingleton<CreateInsuranceRepository>(
+    () => CreateInsuranceRepositoryImpl(remoteDataSource: sl()),
+  );
+
+  // Use Case
+  sl.registerLazySingleton<CreateInsuranceAccountUseCase>(
+    () => CreateInsuranceAccountUseCase(sl()),
+  );
+
+  // BLoC
+  sl.registerFactory<CreateInsuranceBloc>(
+    () => CreateInsuranceBloc(createInsuranceAccount: sl()),
+  );
+
+  sl.registerFactory<OnboardingBloc>(
+    () => OnboardingBloc(
+      getSeen: sl<GetOnboardingSeen>(),
+      saveSeen: sl<SaveOnboardingSeen>(),
     ),
   );
 }

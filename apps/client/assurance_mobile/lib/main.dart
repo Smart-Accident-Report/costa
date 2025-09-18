@@ -1,3 +1,5 @@
+import 'package:assurance_mobile/features/create_insurance/presentation/bloc/create_insurance_bloc.dart';
+import 'package:assurance_mobile/features/create_insurance/presentation/screen/create_insurance_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -33,9 +35,11 @@ class MyApp extends StatelessWidget {
         BlocProvider(
           create: (_) => di.sl<SplashBloc>()..add(const InitializeApp()),
         ),
-        
         BlocProvider(
           create: (_) => di.sl<OnboardingBloc>(),
+        ),
+        BlocProvider(
+          create: (_) => di.sl<CreateInsuranceBloc>(),
         ),
       ],
       child: _buildApp(),
@@ -68,6 +72,13 @@ class MyApp extends StatelessWidget {
           BlocProvider(
             create: (_) => di.sl<OnboardingBloc>(),
             child: const OnboardingScreen(),
+          ),
+        );
+      case '/create_insurance':
+        return _createRoute(
+          BlocProvider(
+            create: (_) => di.sl<CreateInsuranceBloc>(),
+            child: CreateInsuranceScreen(),
           ),
         );
       // case '/login':

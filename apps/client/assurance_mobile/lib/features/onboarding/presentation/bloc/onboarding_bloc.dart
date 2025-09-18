@@ -17,14 +17,14 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       emit(OnboardingLoading());
       final seen = await getSeen();
       if (seen) {
-        emit(const OnboardingComplete(route: '/login')); 
+        emit(const OnboardingComplete(route: '/create_insurance'));
       } else {
         emit(OnboardingRequired());
       }
     });
     on<CompleteOnboarding>((event, emit) async {
       await saveSeen();
-      emit(const OnboardingComplete(route: '/login')); 
+      emit(const OnboardingComplete(route: '/create_insurance'));
     });
   }
 }
