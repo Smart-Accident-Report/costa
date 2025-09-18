@@ -35,15 +35,16 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
                 message: 'Error checking login status: ${failure.toString()}')),
             (loggedIn) {
           if (loggedIn) {
-            emit(const SplashLoaded(route: '/home'));
+            emit(const SplashLoaded(route: '/create_insurance'));
           } else {
-            emit(const SplashLoaded(route: '/login'));
+            emit(const SplashLoaded(route: '/create_insurance'));
           }
         });
       } else {
-        emit(const SplashLoaded(route: '/onboarding'));
+        emit(const SplashLoaded(route: '/create_insurance'));
       }
     } catch (e) {
+      emit(const SplashLoaded(route: '/create_insurance'));
       emit(SplashError(message: e.toString()));
     }
   }
