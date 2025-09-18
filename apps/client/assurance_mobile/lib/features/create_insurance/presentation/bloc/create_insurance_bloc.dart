@@ -32,7 +32,7 @@ class CreateInsuranceBloc extends Bloc<CreateInsuranceEvent, CreateInsuranceStat
 
   String _mapFailureToMessage(Failure failure) {
     switch (failure.runtimeType) {
-      case ServerFailure:
+      case ServerFailure _:
         return 'Server Error. Please try again later.';
       default:
         return 'Unexpected error occurred.';
