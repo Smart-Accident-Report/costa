@@ -84,21 +84,21 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
     _pages = [
       OnboardingPage(
-        title: "Votre Bibliothèque Médicale",
+        title: "Assurance Auto Intelligente",
         description:
-            "Accédez à une vaste collection de livres médicaux, manuels universitaires et ressources académiques spécialement sélectionnées pour les étudiants en médecine.",
+            "Souscrivez votre assurance auto en quelques minutes. Choisissez parmi nos partenaires assureurs et obtenez une couverture adaptée à vos besoins avec une authentification biométrique sécurisée.",
         assetPath: AppImages.onboarding1,
       ),
       OnboardingPage(
-        title: "Polycopiés & Supports de Cours",
+        title: "Constat d'Accident Simplifié",
         description:
-            "Commandez vos polycopiés, notes de cours et supports pédagogiques directement depuis l'application. Impression de qualité professionnelle garantie.",
+            "Déclarez un accident en toute simplicité. Scannez les documents de l'autre partie, enregistrez les dégâts en vidéo, créez un croquis interactif et ajoutez votre témoignage vocal.",
         assetPath: AppImages.onboarding2,
       ),
       OnboardingPage(
-        title: "Préparation aux Examens",
+        title: "Traitement Automatisé",
         description:
-            "QCM, annales d'examens, guides de révision et ouvrages de préparation aux concours. Tout ce dont vous avez besoin pour réussir vos études médicales.",
+            "Notre IA analyse votre dossier instantanément. Obtenez une réponse rapide sur votre demande d'indemnisation et suivez le remboursement en temps réel grâce à notre mascotte guide.",
         assetPath: AppImages.onboarding3,
       ),
     ];
@@ -178,13 +178,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Color _getPageAccentColor(int index) {
     switch (index) {
       case 0:
-        return const Color(0xFF188762); // Updated to new primary color
+        return const Color(0xFF00D084); // Primary color from theme
       case 1:
-        return const Color(0xFF289180); // Updated to new secondary color
+        return const Color(0xFF00B872); // Secondary color from theme
       case 2:
-        return const Color(0xFF2a2a2a); // Updated to new accent color
+        return const Color(0xFF1A1A1A); // Accent color from theme
       default:
-        return const Color(0xFF188762);
+        return const Color(0xFF00D084);
     }
   }
 
@@ -192,21 +192,21 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     switch (index) {
       case 0:
         return [
-          '📚 Manuels de médecine',
-          '🔬 Ouvrages spécialisés',
-          '📖 Références académiques'
+          '🚗 Inscription d\'une voiture',
+          '👥 Conducteurs multiples',
+          '🔐 Connexion biométrique'
         ];
       case 1:
         return [
-          '📄 Polycopiés de cours',
-          '✏️ Notes personnalisées',
-          '🖨️ Impression haute qualité'
+          '📱 Scan QR de l\'autre partie',
+          '📹 Enregistrement vidéo des dégâts',
+          '✏️ Croquis interactif d\'accident'
         ];
       case 2:
         return [
-          '❓ QCM par spécialité',
-          '📋 Annales d\'examens',
-          '🎯 Guides de révision'
+          '🤖 Analyse IA instantanée',
+          '⚡ Traitement automatisé',
+          '💰 Remboursement rapide'
         ];
       default:
         return [];
@@ -229,7 +229,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       child: Scaffold(
         body: Stack(
           children: [
-            // Background gradient - Full screen
+            // Background gradient - Full screen with theme colors
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
@@ -237,8 +237,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      const Color(0xFFd8e1dd), // Updated background color
-                      const Color(0xFFFFFFFF),
+                      const Color(0xFF0F1419), // Background color from theme
+                      const Color(0xFF1E2A32), // Surface color from theme
                       _getPageAccentColor(_currentIndex).withOpacity(0.05),
                     ],
                     stops: const [0.0, 0.7, 1.0],
@@ -322,14 +322,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     opacity: _fadeAnimation,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: const Color(0xFF253339), // Card color from theme
                         borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(32),
                           topRight: Radius.circular(32),
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
+                            color: Colors.black.withOpacity(0.2),
                             blurRadius: 20,
                             spreadRadius: 0,
                             offset: const Offset(0, -4),
@@ -344,7 +344,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             width: 50,
                             height: 4,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE0E0E0),
+                              color: const Color(0xFF3A4A52), // Border color from theme
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),
@@ -392,8 +392,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(4),
                                         color: _currentIndex == index
-                                            ? const Color(0xFF188762)
-                                            : const Color(0xFFE0E0E0),
+                                            ? const Color(0xFF00D084) // Primary color
+                                            : const Color(0xFF3A4A52), // Border color
                                       ),
                                     ),
                                   ),
@@ -438,7 +438,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           page.title,
           style: Theme.of(context).textTheme.displaySmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFF2a2a2a), // Updated text color
+                color: const Color(0xFFFFFFFF), // Primary text color from theme
                 height: 1.2,
               ),
         ),
@@ -449,7 +449,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         Text(
           page.description,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: const Color(0xFF5A5A5A),
+                color: const Color(0xFFE0E6ED), // Secondary text color from theme
                 height: 1.6,
                 fontSize: 16,
               ),
@@ -493,8 +493,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                                  color: const Color(
-                                      0xFF2a2a2a), // Updated text color
+                                  color: const Color(0xFFE0E6ED), // Secondary text color
                                   fontWeight: FontWeight.w500,
                                   height: 1.4,
                                 ),
@@ -521,7 +520,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         style: TextButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           backgroundColor: Colors.transparent,
-          foregroundColor: const Color(0xFF9E9E9E),
+          foregroundColor: const Color(0xFF6B7C85),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -530,7 +529,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           'Passer',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.w500,
-                color: const Color(0xFF9E9E9E),
+                color: const Color(0xFF6B7C85),
               ),
         ),
       ),
@@ -546,14 +545,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF188762), // Updated to new primary color
-            const Color(0xFF289180), // Updated to new secondary color
+            const Color(0xFF00D084), // Primary color from theme
+            const Color(0xFF00B872), // Secondary color from theme
           ],
         ),
         borderRadius: BorderRadius.circular(25),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF188762).withOpacity(0.25),
+            color: const Color(0xFF00D084).withOpacity(0.25),
             blurRadius: 12,
             spreadRadius: 0,
             offset: const Offset(0, 4),
