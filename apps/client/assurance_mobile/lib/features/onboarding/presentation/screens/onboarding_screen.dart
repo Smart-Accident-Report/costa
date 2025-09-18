@@ -223,7 +223,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return BlocListener<OnboardingBloc, OnboardingState>(
       listener: (context, state) {
         if (state is OnboardingComplete) {
-          Navigator.of(context).pushReplacementNamed('/login');
+          Navigator.of(context).pushReplacementNamed('/create_insurance');
         }
       },
       child: Scaffold(
@@ -344,7 +344,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             width: 50,
                             height: 4,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF3A4A52), // Border color from theme
+                              color: const Color(
+                                  0xFF3A4A52), // Border color from theme
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),
@@ -392,8 +393,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(4),
                                         color: _currentIndex == index
-                                            ? const Color(0xFF00D084) // Primary color
-                                            : const Color(0xFF3A4A52), // Border color
+                                            ? const Color(
+                                                0xFF00D084) // Primary color
+                                            : const Color(
+                                                0xFF3A4A52), // Border color
                                       ),
                                     ),
                                   ),
@@ -449,7 +452,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         Text(
           page.description,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: const Color(0xFFE0E6ED), // Secondary text color from theme
+                color:
+                    const Color(0xFFE0E6ED), // Secondary text color from theme
                 height: 1.6,
                 fontSize: 16,
               ),
@@ -493,7 +497,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                                  color: const Color(0xFFE0E6ED), // Secondary text color
+                                  color: const Color(
+                                      0xFFE0E6ED), // Secondary text color
                                   fontWeight: FontWeight.w500,
                                   height: 1.4,
                                 ),

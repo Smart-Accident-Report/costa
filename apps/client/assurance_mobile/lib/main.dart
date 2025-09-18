@@ -68,19 +68,9 @@ class MyApp extends StatelessWidget {
       case '/':
         return _createRoute(const SplashScreen());
       case '/onboarding':
-        return _createRoute(
-          BlocProvider(
-            create: (_) => di.sl<OnboardingBloc>(),
-            child: const OnboardingScreen(),
-          ),
-        );
+        return _createRoute(OnboardingScreen());
       case '/create_insurance':
-        return _createRoute(
-          BlocProvider(
-            create: (_) => di.sl<CreateInsuranceBloc>(),
-            child: CreateInsuranceScreen(),
-          ),
-        );
+        return _createRoute(CreateInsuranceScreen());
       // case '/login':
       //   return _createRoute(const LoginScreen());
       // case '/signup':

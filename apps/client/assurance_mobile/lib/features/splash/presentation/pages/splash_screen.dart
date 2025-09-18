@@ -148,7 +148,8 @@ class _SplashScreenState extends State<SplashScreen>
                           color: Colors.white,
                         ),
                   ),
-                  backgroundColor: const Color(0xFFFF4757), // Error color from theme
+                  backgroundColor:
+                      const Color(0xFFFF4757), // Error color from theme
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -205,6 +206,7 @@ class _SplashScreenState extends State<SplashScreen>
                                     ),
                                     child: Image.asset(
                                       AppImages.logo,
+                                      color: Colors.white,
                                       width: context.width * 0.4,
                                       height: context.width * 0.4,
                                       fit: BoxFit.contain,
@@ -233,7 +235,8 @@ class _SplashScreenState extends State<SplashScreen>
                                       vertical: 8,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF253339), // Card color from theme
+                                      color: const Color(
+                                          0xFF253339), // Card color from theme
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(
                                         color: const Color(0xFF00D084)
@@ -247,7 +250,8 @@ class _SplashScreenState extends State<SplashScreen>
                                           .textTheme
                                           .titleMedium
                                           ?.copyWith(
-                                            color: const Color(0xFF00D084), // Primary color
+                                            color: const Color(
+                                                0xFF00D084), // Primary color
                                             fontWeight: FontWeight.w600,
                                             letterSpacing: 0.3,
                                           ),
@@ -260,7 +264,8 @@ class _SplashScreenState extends State<SplashScreen>
                                         .textTheme
                                         .bodyMedium
                                         ?.copyWith(
-                                          color: const Color(0xFFE0E6ED), // Secondary text color
+                                          color: const Color(
+                                              0xFFE0E6ED), // Secondary text color
                                           letterSpacing: 0.2,
                                         ),
                                   ),
@@ -287,7 +292,8 @@ class _SplashScreenState extends State<SplashScreen>
                                     Container(
                                       padding: const EdgeInsets.all(20),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF1E2A32), // Surface color
+                                        color: const Color(
+                                            0xFF1E2A32), // Surface color
                                         borderRadius: BorderRadius.circular(25),
                                         border: Border.all(
                                           color: const Color(0xFF00D084)
@@ -325,7 +331,8 @@ class _SplashScreenState extends State<SplashScreen>
                                           .textTheme
                                           .bodyMedium
                                           ?.copyWith(
-                                            color: const Color(0xFFE0E6ED), // Primary text
+                                            color: const Color(
+                                                0xFFE0E6ED), // Primary text
                                             letterSpacing: 0.3,
                                             fontWeight: FontWeight.w500,
                                           ),
@@ -337,7 +344,8 @@ class _SplashScreenState extends State<SplashScreen>
                                           .textTheme
                                           .bodySmall
                                           ?.copyWith(
-                                            color: const Color(0xFF8A9BA8), // Hint text
+                                            color: const Color(
+                                                0xFF8A9BA8), // Hint text
                                             letterSpacing: 0.2,
                                           ),
                                     ),
