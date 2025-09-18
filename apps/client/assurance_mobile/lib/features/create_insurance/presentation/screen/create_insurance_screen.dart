@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-
-import '../bloc/create_insurance_bloc.dart';
+import 'camera_scan_screen.dart';
 
 class CreateInsuranceScreen extends StatefulWidget {
   const CreateInsuranceScreen({super.key});
@@ -12,310 +10,798 @@ class CreateInsuranceScreen extends StatefulWidget {
 
 class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
     with TickerProviderStateMixin {
-  final _formKey = GlobalKey<FormState>();
-  String? _selectedCompany;
-  String? _selectedType;
-  String? _carDocumentsUrl;
-  bool _documentsScanned = false;
-
-  late AnimationController _fadeController;
-  late AnimationController _slideController;
-  late AnimationController _scaleController;
+  final _pageController = PageController();
+  final _formKeys = List.generate(3, (index) => GlobalKey<FormState>());
   
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _documentScanAnimation;
-
-  // Mock data for dropdowns
-  final List<String> _insuranceCompanies = [
-    'CAAT',
-    'SAA',
-    'CAAR',
-    'CNMA',
-    'Salama Assurances'
-  ];
-  final List<String> _insuranceTypes = [
-    'standard',
-    'auto professionnelle',
-    'tous risques'
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    
-    // Initialize animation controllers
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    
-    _scaleController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    
-    // Initialize animations
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeInOut,
-    ));
-    
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutCubic,
-    ));
-    
-    _scaleAnimation = Tween<double>(
-      begin: 0.9,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _scaleController,
-      curve: Curves.elasticOut,
-    ));
-    
-    _documentScanAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _scaleController,
-      curve: Curves.bounceOut,
-    ));
-    
-    // Start animations
-    _fadeController.forward();
-    _slideController.forward();
-    _scaleController.forward();
-  }
-
+  int _currentStep = 0;
+  
+  // Document scanning states
+  bool _carteGriseScanned = false;
+  bool _drivingLicenseScanned = false;
+  
+  // Extracted data from documents
+  Map<String, dynamic> _extractedCarData = {};
+  Map<String, dynamic> _extractedDriverData = {};
+  
+  // User input data
+  String? _selectedPuissanceMoteur;
+  String? _selectedNombrePlaces;
+  String? _selectedMarque;
+  String? _selectedModele;
+  String? _selectedAnnee;
+  String? _selectedWilaya;
+  String? _selectedAssistanceType;
+  String? _selectedDuree;
+  // ignore: unused_field
+  double? _valeurVenale;
+  bool _paymentCCP = false;
+  bool _isUnder25 = false;
+  bool _isPermitOverAYear = false;
+  
   @override
   void dispose() {
-    _fadeController.dispose();
-    _slideController.dispose();
-    _scaleController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
-  void _scanDocuments() async {
-    setState(() {
-      _documentsScanned = false;
-    });
+  void _nextStep() {
+    if (_formKeys[_currentStep].currentState!.validate()) {
+      _formKeys[_currentStep].currentState!.save();
+      if (_currentStep < 2) {
+        setState(() {
+          _currentStep++;
+        });
+        _pageController.nextPage(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        // Handle form submission
+        _showSuccessDialog();
+      }
+    }
+  }
+
+  void _previousStep() {
+    if (_currentStep > 0) {
+      setState(() {
+        _currentStep--;
+      });
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Theme.of(context).cardColor,
+                  Theme.of(context).cardColor.withOpacity(0.8),
+                ],
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check_circle_outline,
+                    size: 32,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Assurance Créée avec Succès!',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Votre demande d\'assurance a été soumise avec succès. Vous recevrez une confirmation par email.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).textTheme.bodySmall?.color,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('Terminé'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _scanDocument(String documentType) async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CameraScanScreen(documentType: documentType),
+      ),
+    );
     
-    // Reset and start scan animation
-    _scaleController.reset();
-    _scaleController.forward();
-    
-    // Simulate document scanning delay
-    await Future.delayed(const Duration(milliseconds: 1500));
-    
-    setState(() {
-      _carDocumentsUrl = 'mocked_doc_url_123';
-      _documentsScanned = true;
-    });
-    
-    if (mounted) {
+    if (result != null) {
+      setState(() {
+        if (documentType == 'carte_grise') {
+          _carteGriseScanned = true;
+          _extractedCarData = result;
+          // Auto-fill form fields
+          _selectedMarque = result['marque'];
+          _selectedModele = result['modele'];
+          _selectedAnnee = result['annee'];
+          _selectedWilaya = result['wilaya'];
+        } else if (documentType == 'permis_conduire') {
+          _drivingLicenseScanned = true;
+          _extractedDriverData = result;
+        }
+      });
+      
+      // Show success feedback
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.check_circle, color: Colors.white),
-              const SizedBox(width: 8),
-              const Text('Documents du véhicule scannés avec succès!'),
+              Icon(
+                Icons.check_circle,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 12),
+              Text('Document scanné avec succès'),
             ],
           ),
-          backgroundColor: Theme.of(context).colorScheme.primary,
+          backgroundColor: Theme.of(context).cardColor,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }
   }
 
-  Widget _buildAnimatedFormField({
-    required Widget child,
-    required int index,
-  }) {
-    return AnimatedBuilder(
-      animation: _slideAnimation,
-      builder: (context, _) {
-        return Transform.translate(
-          offset: Offset(
-            _slideAnimation.value.dx,
-            _slideAnimation.value.dy * (index * 0.1),
-          ),
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: child,
-          ),
-        );
-      },
+  Widget _buildStepIndicator() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
+      child: Row(
+        children: [
+          ...List.generate(3, (index) {
+            final isActive = _currentStep >= index;
+            //final isCurrent = _currentStep == index;
+            
+            return Expanded(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 400),
+                      height: 4,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(2),
+                        color: isActive 
+                          ? Theme.of(context).colorScheme.primary 
+                          : Theme.of(context).dividerColor,
+                      ),
+                    ),
+                  ),
+                  if (index < 2) const SizedBox(width: 8),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 
-  Widget _buildDocumentScanButton() {
-    return AnimatedBuilder(
-      animation: _documentScanAnimation,
-      builder: (context, _) {
-        return Transform.scale(
-          scale: _scaleAnimation.value,
+  Widget _buildScanButton({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+    required bool isScanned,
+  }) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
           child: Container(
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
-              gradient: _documentsScanned
-                  ? LinearGradient(
-                      colors: [
-                        Theme.of(context).colorScheme.primary,
-                        Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                      ],
-                    )
-                  : LinearGradient(
-                      colors: [
-                        Theme.of(context).colorScheme.surface,
-                        Theme.of(context).colorScheme.surface,
-                      ],
-                    ),
               border: Border.all(
-                color: _documentsScanned 
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                width: 2,
+                color: isScanned 
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).dividerColor,
+                width: isScanned ? 2 : 1,
               ),
+              gradient: isScanned
+                ? LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                    ],
+                  )
+                : null,
             ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: _documentsScanned ? null : _scanDocuments,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: isScanned 
+                      ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+                      : Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    isScanned ? Icons.check_circle : icon,
+                    color: isScanned 
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).textTheme.bodyLarge?.color,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: _documentsScanned
-                            ? Icon(
-                                Icons.check_circle,
-                                color: Colors.black,
-                                size: 24,
-                                key: ValueKey('check'),
-                              )
-                            : Icon(
-                                Icons.document_scanner,
-                                color: Theme.of(context).colorScheme.primary,
-                                size: 24,
-                                key: ValueKey('scan'),
-                              ),
-                      ),
-                      const SizedBox(width: 12),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: Text(
-                          _documentsScanned
-                              ? 'Documents scannés ✓'
-                              : 'Scanner les documents du véhicule',
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: _documentsScanned 
-                                ? Colors.black
-                                : Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          key: ValueKey(_documentsScanned),
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
                   ),
                 ),
-              ),
+                Icon(
+                  Icons.chevron_right,
+                  color: Theme.of(context).textTheme.bodySmall?.color,
+                ),
+              ],
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
-  Widget _buildAnimatedDropdown({
-    required String labelText,
-    required String? value,
+  Widget _buildCustomDropdown({
+    required String label,
     required List<String> items,
-    required Function(String?) onChanged,
-    required String? Function(String?) validator,
-    required int index,
+    required String? value,
+    required ValueChanged<String?> onChanged,
+    String? Function(String?)? validator,
   }) {
-    return _buildAnimatedFormField(
-      index: index,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: value != null
-              ? [
-                  BoxShadow(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : [],
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: DropdownButtonFormField<String>(
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: Theme.of(context).textTheme.titleSmall,
         ),
-        child: DropdownButtonFormField<String>(
-          decoration: InputDecoration(
-            labelText: labelText,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-              ),
+        value: value,
+        items: items.map((String item) {
+          return DropdownMenuItem<String>(
+            value: item,
+            child: Text(
+              item,
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.primary,
-                width: 2,
-              ),
-            ),
-            filled: true,
-            fillColor: Theme.of(context).colorScheme.surface,
-            prefixIcon: Icon(
-              index == 0 ? Icons.business : Icons.security,
-              color: value != null 
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+          );
+        }).toList(),
+        onChanged: onChanged,
+        validator: validator,
+        dropdownColor: Theme.of(context).cardColor,
+        style: Theme.of(context).textTheme.bodyMedium,
+      ),
+    );
+  }
+
+  Widget _buildCustomTextField({
+    required String label,
+    String? initialValue,
+    TextInputType? keyboardType,
+    FormFieldSetter<String>? onSaved,
+    String? Function(String?)? validator,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: TextFormField(
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: Theme.of(context).textTheme.titleSmall,
+        ),
+        initialValue: initialValue,
+        keyboardType: keyboardType,
+        onSaved: onSaved,
+        validator: validator,
+        style: Theme.of(context).textTheme.bodyMedium,
+      ),
+    );
+  }
+
+  Widget _buildCustomCheckbox({
+    required String title,
+    required bool value,
+    required ValueChanged<bool?> onChanged,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => onChanged(!value),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+            child: Row(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: value 
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).dividerColor,
+                      width: 2,
+                    ),
+                    color: value 
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.transparent,
+                  ),
+                  child: value
+                    ? Icon(
+                        Icons.check,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      )
+                    : null,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+              ],
             ),
           ),
-          value: value,
-          items: items.map((String itemValue) {
-            return DropdownMenuItem<String>(
-              value: itemValue,
-              child: Text(
-                itemValue,
-                style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVehicleInfoPage() {
+    return Form(
+      key: _formKeys[0],
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Informations du véhicule',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            );
-          }).toList(),
-          onChanged: onChanged,
-          validator: validator,
-          dropdownColor: Theme.of(context).colorScheme.surface,
-          style: Theme.of(context).textTheme.bodyMedium,
+              const SizedBox(height: 8),
+              Text(
+                'Scannez votre carte grise ou saisissez manuellement',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 24),
+              
+              // Scan button
+              _buildScanButton(
+                title: 'Scanner la carte grise',
+                subtitle: 'Extraction automatique des données',
+                icon: Icons.camera_alt,
+                onTap: () => _scanDocument('carte_grise'),
+                isScanned: _carteGriseScanned,
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Manual input fields
+              _buildCustomDropdown(
+                label: 'Puissance Moteur',
+                items: ['3-4cv', '5-6cv', '7-10cv', '11-14cv', '15-23 cv', '24cv+'],
+                value: _selectedPuissanceMoteur,
+                onChanged: (value) => setState(() => _selectedPuissanceMoteur = value),
+                validator: (value) => value == null ? 'Veuillez sélectionner une puissance' : null,
+              ),
+              
+              _buildCustomDropdown(
+                label: 'Nombre de places',
+                items: ['3', '4', '5', '7'],
+                value: _selectedNombrePlaces,
+                onChanged: (value) => setState(() => _selectedNombrePlaces = value),
+                validator: (value) => value == null ? 'Veuillez sélectionner le nombre de places' : null,
+              ),
+              
+              _buildCustomTextField(
+                label: 'Marque',
+                initialValue: _selectedMarque ?? _extractedCarData['marque'],
+                onSaved: (value) => _selectedMarque = value,
+                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir la marque' : null,
+              ),
+              
+              _buildCustomTextField(
+                label: 'Modèle',
+                initialValue: _selectedModele ?? _extractedCarData['modele'],
+                onSaved: (value) => _selectedModele = value,
+                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir le modèle' : null,
+              ),
+              
+              _buildCustomTextField(
+                label: 'Année',
+                initialValue: _selectedAnnee ?? _extractedCarData['annee'],
+                keyboardType: TextInputType.number,
+                onSaved: (value) => _selectedAnnee = value,
+                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir l\'année' : null,
+              ),
+              
+              _buildCustomTextField(
+                label: 'Valeur vénale du véhicule',
+                keyboardType: TextInputType.number,
+                onSaved: (value) => _valeurVenale = double.tryParse(value ?? ''),
+                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir la valeur vénale' : null,
+              ),
+              
+              _buildCustomTextField(
+                label: 'Wilaya',
+                initialValue: _selectedWilaya ?? _extractedCarData['wilaya'],
+                onSaved: (value) => _selectedWilaya = value,
+                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir la wilaya' : null,
+              ),
+              
+              const SizedBox(height: 16),
+              
+              _buildCustomCheckbox(
+                title: 'Paiement par facilité (CCP)',
+                value: _paymentCCP,
+                onChanged: (value) => setState(() => _paymentCCP = value!),
+              ),
+              
+              _buildCustomCheckbox(
+                title: 'Avez-vous moins de 25 ans ?',
+                value: _isUnder25,
+                onChanged: (value) => setState(() => _isUnder25 = value!),
+              ),
+              
+              _buildCustomCheckbox(
+                title: 'Âge de permis plus d\'une année ?',
+                value: _isPermitOverAYear,
+                onChanged: (value) => setState(() => _isPermitOverAYear = value!),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAssistancePage() {
+    return Form(
+      key: _formKeys[1],
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Type d\'assistance',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Choisissez la formule qui vous convient',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 32),
+              
+              _buildCustomDropdown(
+                label: 'Formule d\'assistance',
+                items: [
+                  'Formule Tranquillité',
+                  'Formule Tranquillité Plus',
+                  'Formule Liberté'
+                ],
+                value: _selectedAssistanceType,
+                onChanged: (value) => setState(() => _selectedAssistanceType = value),
+                validator: (value) => value == null ? 'Veuillez sélectionner une formule' : null,
+              ),
+              
+              _buildCustomDropdown(
+                label: 'Durée',
+                items: ['6 mois', '1 année'],
+                value: _selectedDuree,
+                onChanged: (value) => setState(() => _selectedDuree = value),
+                validator: (value) => value == null ? 'Veuillez sélectionner une durée' : null,
+              ),
+              
+              // Insurance formula cards
+              const SizedBox(height: 24),
+              _buildFormulaCard(
+                'Tranquillité',
+                'Couverture de base avec assistance 24h/7j',
+                ['Dépannage', 'Remorquage', 'Assistance juridique'],
+                _selectedAssistanceType == 'Formule Tranquillité',
+                () => setState(() => _selectedAssistanceType = 'Formule Tranquillité'),
+              ),
+              
+              _buildFormulaCard(
+                'Tranquillité Plus',
+                'Couverture étendue avec services premium',
+                ['Tous services Tranquillité', 'Véhicule de remplacement', 'Rapatriement'],
+                _selectedAssistanceType == 'Formule Tranquillité Plus',
+                () => setState(() => _selectedAssistanceType = 'Formule Tranquillité Plus'),
+              ),
+              
+              _buildFormulaCard(
+                'Liberté',
+                'Couverture complète tous risques',
+                ['Tous services précédents', 'Vol et incendie', 'Bris de glace'],
+                _selectedAssistanceType == 'Formule Liberté',
+                () => setState(() => _selectedAssistanceType = 'Formule Liberté'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormulaCard(String title, String description, List<String> features, bool isSelected, VoidCallback onTap) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isSelected 
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).dividerColor,
+                width: isSelected ? 2 : 1,
+              ),
+              gradient: isSelected
+                ? LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                      Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                    ],
+                  )
+                : null,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isSelected 
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).dividerColor,
+                          width: 2,
+                        ),
+                        color: isSelected 
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.transparent,
+                      ),
+                      child: isSelected
+                        ? Icon(
+                            Icons.check,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          )
+                        : null,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  description,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+                ...features.map((feature) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.check_circle_outline,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        feature,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                )),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDriverInfoPage() {
+    return Form(
+      key: _formKeys[2],
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Informations du conducteur',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Scannez votre permis ou saisissez manuellement',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 24),
+              
+              // Scan button
+              _buildScanButton(
+                title: 'Scanner le permis de conduire',
+                subtitle: 'Extraction automatique des données',
+                icon: Icons.credit_card,
+                onTap: () => _scanDocument('permis_conduire'),
+                isScanned: _drivingLicenseScanned,
+              ),
+              
+              const SizedBox(height: 24),
+              
+              _buildCustomTextField(
+                label: 'Nom',
+                initialValue: _extractedDriverData['nom'],
+                onSaved: (value) => _extractedDriverData['nom'] = value,
+                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir le nom' : null,
+              ),
+              
+              _buildCustomTextField(
+                label: 'Prénom',
+                initialValue: _extractedDriverData['prenom'],
+                onSaved: (value) => _extractedDriverData['prenom'] = value,
+                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir le prénom' : null,
+              ),
+              
+              _buildCustomTextField(
+                label: 'Date de naissance',
+                initialValue: _extractedDriverData['date_naissance'],
+                onSaved: (value) => _extractedDriverData['date_naissance'] = value,
+                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir la date de naissance' : null,
+              ),
+              
+              _buildCustomTextField(
+                label: 'Numéro de permis',
+                initialValue: _extractedDriverData['num_permis'],
+                onSaved: (value) => _extractedDriverData['num_permis'] = value,
+                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir le numéro de permis' : null,
+              ),
+              
+              _buildCustomTextField(
+                label: 'Date de permis',
+                initialValue: _extractedDriverData['date_permis'],
+                onSaved: (value) => _extractedDriverData['date_permis'] = value,
+                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir la date de permis' : null,
+              ),
+              
+              _buildCustomTextField(
+                label: 'Type de permis',
+                initialValue: _extractedDriverData['type_permis'],
+                onSaved: (value) => _extractedDriverData['type_permis'] = value,
+                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir le type de permis' : null,
+              ),
+              
+              _buildCustomTextField(
+                label: 'Numéro de châssis',
+                initialValue: _extractedCarData['num_chassis'],
+                onSaved: (value) => _extractedCarData['num_chassis'] = value,
+                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir le numéro de châssis' : null,
+              ),
+              
+              _buildCustomTextField(
+                label: 'Énergie',
+                initialValue: _extractedCarData['energie'],
+                onSaved: (value) => _extractedCarData['energie'] = value,
+                validator: (value) => value?.isEmpty == true ? 'Veuillez saisir l\'énergie' : null,
+              ),
+              
+              _buildCustomDropdown(
+                label: 'Type de matricule',
+                items: ['provisoire', 'permanent 11 digits', '10 digits'],
+                value: _extractedCarData['type_matricule'],
+                onChanged: (value) => setState(() => _extractedCarData['type_matricule'] = value),
+                validator: (value) => value == null ? 'Veuillez sélectionner le type de matricule' : null,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -324,340 +810,76 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Créer une assurance',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        elevation: 0,
+        leading: _currentStep > 0
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios),
+                onPressed: _previousStep,
+              )
+            : IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+      ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _formKey,
-              child: BlocConsumer<CreateInsuranceBloc, CreateInsuranceState>(
-                listener: (context, state) {
-                  if (state is CreateInsuranceSuccess) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Row(
-                          children: [
-                            const Icon(Icons.check_circle, color: Colors.white),
-                            const SizedBox(width: 8),
-                            const Text('Assurance créée avec succès!'),
-                          ],
-                        ),
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    );
-                  } else if (state is CreateInsuranceFailure) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Row(
-                          children: [
-                            const Icon(Icons.error, color: Colors.white),
-                            const SizedBox(width: 8),
-                            Expanded(child: Text(state.message)),
-                          ],
-                        ),
-                        backgroundColor: Colors.red,
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    );
-                  }
-                },
-                builder: (context, state) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Header with animation
-                      FadeTransition(
-                        opacity: _fadeAnimation,
-                        child: SlideTransition(
-                          position: _slideAnimation,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Créez votre assurance',
-                                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'avec Costa',
-                                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Suivez les étapes pour souscrire à votre assurance automobile',
-                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      
-                      // Step indicator
-                      _buildAnimatedFormField(
-                        index: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    '1',
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  'Scanner vos documents',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      
-                      // Document Scanning Button with enhanced animation
-                      _buildAnimatedFormField(
-                        index: 1,
-                        child: _buildDocumentScanButton(),
-                      ),
-                      const SizedBox(height: 32),
-                      
-                      // Step 2 indicator
-                      _buildAnimatedFormField(
-                        index: 2,
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: _documentsScanned
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(context).colorScheme.surface,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '2',
-                                    style: TextStyle(
-                                      color: _documentsScanned 
-                                          ? Colors.black 
-                                          : Theme.of(context).colorScheme.primary,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  'Choisir votre assurance',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    color: _documentsScanned 
-                                        ? Theme.of(context).colorScheme.onSurface
-                                        : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      
-                      // Insurance Company Dropdown with enhanced styling
-                      _buildAnimatedDropdown(
-                        labelText: 'Choisir une société d\'assurance',
-                        value: _selectedCompany,
-                        items: _insuranceCompanies,
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedCompany = newValue;
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Veuillez sélectionner une société d\'assurance';
-                          }
-                          return null;
-                        },
-                        index: 3,
-                      ),
-                      const SizedBox(height: 20),
-                      
-                      // Insurance Type Dropdown with enhanced styling
-                      _buildAnimatedDropdown(
-                        labelText: 'Choisir un type d\'assurance',
-                        value: _selectedType,
-                        items: _insuranceTypes,
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedType = newValue;
-                          });
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Veuillez sélectionner un type d\'assurance';
-                          }
-                          return null;
-                        },
-                        index: 1,
-                      ),
-                      const SizedBox(height: 32),
-                      
-                      // Submit button with enhanced animation
-                      _buildAnimatedFormField(
-                        index: 5,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          height: 56,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            gradient: LinearGradient(
-                              colors: [
-                                Theme.of(context).colorScheme.primary,
-                                Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                              ],
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: state is! CreateInsuranceLoading
-                                  ? () {
-                                      if (_formKey.currentState!.validate() &&
-                                          _carDocumentsUrl != null) {
-                                        BlocProvider.of<CreateInsuranceBloc>(context)
-                                            .add(
-                                          CreateInsuranceSubmitted(
-                                            company: _selectedCompany!,
-                                            type: _selectedType!,
-                                            carDocumentsUrl: _carDocumentsUrl!,
-                                          ),
-                                        );
-                                      } else if (_carDocumentsUrl == null) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: const Row(
-                                              children: [
-                                                Icon(Icons.warning, color: Colors.white),
-                                                SizedBox(width: 8),
-                                                Text('Veuillez d\'abord scanner les documents'),
-                                              ],
-                                            ),
-                                            backgroundColor: Colors.orange,
-                                            behavior: SnackBarBehavior.floating,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    }
-                                  : null,
-                              child: Center(
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 200),
-                                  child: state is CreateInsuranceLoading
-                                      ? const SizedBox(
-                                          width: 24,
-                                          height: 24,
-                                          child: CircularProgressIndicator(
-                                            color: Colors.black,
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : Text(
-                                          'Créer mon assurance',
-                                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                            color: Colors.black,
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      
-                      const SizedBox(height: 24),
-                      
-                      // Footer note
-                      _buildAnimatedFormField(
-                        index: 6,
-                        child: Text(
-                          'En créant votre assurance, vous acceptez nos conditions générales et notre politique de confidentialité.',
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
+        child: Column(
+          children: [
+            _buildStepIndicator(),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _buildVehicleInfoPage(),
+                  _buildAssistancePage(),
+                  _buildDriverInfoPage(),
+                ],
               ),
             ),
-          ),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                border: Border(
+                  top: BorderSide(
+                    color: Theme.of(context).dividerColor,
+                    width: 1,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  if (_currentStep > 0)
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _previousStep,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),),
+                        child: const Text('Précédent'),
+                      ),
+                    ),
+                  if (_currentStep > 0) const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _nextStep,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: Text(_currentStep < 2 ? 'Suivant' : 'Terminer'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
