@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:meta/meta.dart';
-import '../../../../core/usecase/usecase.dart';
 import '../../../onboarding/domain/usecases/get_onboarding_seen.dart';
 import '../../domain/is_user_loged_in.dart';
 
@@ -26,23 +25,7 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
     try {
       await Future.delayed(const Duration(seconds: 5));
 
-      final hasSeenOnboarding = await getOnboardingSeen();
-
-      if (hasSeenOnboarding) {
-        final loggedInResult = await isUserLoggedIn(NoParams());
-        loggedInResult.fold(
-            (failure) => emit(SplashError(
-                message: 'Error checking login status: ${failure.toString()}')),
-            (loggedIn) {
-          if (loggedIn) {
-            emit(const SplashLoaded(route: '/create_insurance'));
-          } else {
-            emit(const SplashLoaded(route: '/create_insurance'));
-          }
-        });
-      } else {
-        emit(const SplashLoaded(route: '/create_insurance'));
-      }
+      emit(const SplashLoaded(route: '/onboarding'));
     } catch (e) {
       emit(const SplashLoaded(route: '/create_insurance'));
       emit(SplashError(message: e.toString()));
