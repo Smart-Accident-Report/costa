@@ -69,7 +69,7 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
 
       final bool didAuthenticate = await _localAuth.authenticate(
         localizedReason:
-            'Veuillez authentifier votre identité pour finaliser votre demande d\'assurance',
+            'Veuillez authentifier votre identité pour finaliser votre demande d\'assurance', // Fixed encoding
         options: const AuthenticationOptions(
           biometricOnly: true,
           stickyAuth: true,
@@ -136,10 +136,164 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
           curve: Curves.easeInOut,
         );
       } else {
-        // Handle form submission
-        _showSuccessDialog();
+        // Start biometric authentication flow
+        _showBiometricAuthDialog();
       }
     }
+  }
+
+  void _showBiometricAuthDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Theme.of(context).cardColor,
+                  Theme.of(context).cardColor.withOpacity(0.8),
+                ],
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.fingerprint,
+                    size: 32,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Authentification requise',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Veuillez authentifier votre identité avec votre empreinte digitale pour finaliser votre demande d\'assurance',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Annuler'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          Navigator.of(context).pop();
+                          _showProcessingDialog();
+
+                          // Perform biometric authentication
+                          final authenticated =
+                              await _authenticateWithFingerprint();
+
+                          Navigator.of(context)
+                              .pop(); // Close processing dialog
+
+                          if (authenticated) {
+                            _showSuccessDialog();
+                          } else {
+                            _showAuthFailedDialog();
+                          }
+                        },
+                        child: const Text('Authentifier'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showProcessingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Theme.of(context).cardColor,
+                  Theme.of(context).cardColor.withOpacity(0.8),
+                ],
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 64,
+                  height: 64,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Authentification en cours...',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Veuillez placer votre doigt sur le capteur d\'empreintes',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _previousStep() {
@@ -211,22 +365,11 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () async {
-                      Navigator.of(context).pop(); // Close current dialog
-
-                      // Authenticate with fingerprint
-                      final authenticated =
-                          await _authenticateWithFingerprint();
-
-                      if (authenticated) {
-                        // Show under review dialog
-                        _showUnderReviewDialog();
-                      } else {
-                        // Show authentication failed dialog
-                        _showAuthFailedDialog();
-                      }
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _showUnderReviewDialog();
                     },
-                    child: const Text('Terminer'),
+                    child: const Text('Continuer'),
                   ),
                 ),
               ],
