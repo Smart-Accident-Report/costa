@@ -437,8 +437,8 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.of(context).pop();
-                      Navigator.of(context).pop();
+                      Navigator.of(context)
+                          .pushNamed('/login_with_finger_print');
                     },
                     child: const Text('Compris'),
                   ),
@@ -519,7 +519,6 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.of(context).pop();
                           Navigator.of(context).pop();
                         },
                         child: const Text('Annuler'),
