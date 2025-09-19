@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:local_auth/error_codes.dart' as auth_error;
+import 'dart:async';
 
-// Extension for responsive design
 extension ResponsiveContext on BuildContext {
   double get height => MediaQuery.of(this).size.height;
   double get width => MediaQuery.of(this).size.width;
@@ -22,336 +22,552 @@ class _LoginWithFingerPrintsState extends State<LoginWithFingerPrints>
 
   late AnimationController _pulseController;
   late AnimationController _processingController;
+  late AnimationController _successController;
+  late AnimationController _backgroundController;
+  late AnimationController _fadeController;
+
   late Animation<double> _pulseAnimation;
   late Animation<double> _processingAnimation;
+  late Animation<double> _successAnimation;
+  late Animation<double> _backgroundAnimation;
+  late Animation<double> _fadeAnimation;
 
   bool _isProcessing = false;
   bool _isAuthenticated = false;
   String _statusMessage = 'Appuyez sur l\'empreinte pour vous authentifier';
+  int _countdown = 4;
+  Timer? _countdownTimer;
 
   @override
   void initState() {
     super.initState();
+    _checkBiometrics();
+    _initializeAnimations();
+  }
 
+  void _initializeAnimations() {
     // Pulse animation for fingerprint icon
     _pulseController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
-    )..repeat();
+    )..repeat(reverse: true);
 
-    _pulseAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.2,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
+    _pulseAnimation = Tween<double>(begin: 0.9, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _pulseController,
+        curve: Curves.easeInOut,
+      ),
+    );
 
     // Processing animation
     _processingController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
-    _processingAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _processingController,
-      curve: Curves.easeInOut,
-    ));
+    _processingAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _processingController,
+        curve: Curves.elasticOut,
+      ),
+    );
 
-    _checkBiometricAvailability();
+    // Success animation
+    _successController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _successAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _successController,
+        curve: Curves.bounceOut,
+      ),
+    );
+
+    // Background animation
+    _backgroundController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    );
+
+    _backgroundAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _backgroundController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    // Fade animation for smooth transitions
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: Curves.easeIn,
+      ),
+    );
+
+    _fadeController.forward();
   }
 
-  Future<void> _checkBiometricAvailability() async {
+  Future<void> _checkBiometrics() async {
     try {
-      final bool isAvailable = await _localAuth.isDeviceSupported();
-      final bool canCheckBiometrics = await _localAuth.canCheckBiometrics;
+      final bool canCheck = await _localAuth.canCheckBiometrics;
+      final List<BiometricType> availableBiometrics =
+          await _localAuth.getAvailableBiometrics();
 
-      if (!isAvailable || !canCheckBiometrics) {
+      if (!canCheck || availableBiometrics.isEmpty) {
         setState(() {
-          _statusMessage = 'Authentification biométrique non disponible';
+          _statusMessage =
+              'Aucune biométrie disponible ou configurée sur cet appareil.';
         });
       }
-    } catch (e) {
+    } on PlatformException catch (e) {
+      print('Error checking biometrics: $e');
       setState(() {
-        _statusMessage = 'Erreur lors de la vérification de la disponibilité';
+        _statusMessage =
+            'Une erreur est survenue lors de la vérification des biométries.';
       });
     }
   }
 
-  Future<void> _authenticateWithFingerprint() async {
-    if (_isProcessing) return;
-
-    setState(() {
-      _isProcessing = true;
-      _statusMessage = 'Placez votre doigt sur le capteur';
-    });
-
-    _pulseController.stop();
+  Future<void> _authenticate() async {
+    final availableBiometrics = await _localAuth.getAvailableBiometrics();
+    if (availableBiometrics.isEmpty) {
+      setState(() {
+        _statusMessage =
+            'Veuillez enregistrer une empreinte digitale dans les paramètres.';
+      });
+      return;
+    }
 
     try {
-      final bool didAuthenticate = await _localAuth.authenticate(
-        localizedReason:
-            'Veuillez vous authentifier pour accéder à votre compte',
+      final bool isAuthorized = await _localAuth.authenticate(
+        localizedReason: 'Scannez votre empreinte pour vous authentifier',
         options: const AuthenticationOptions(
           biometricOnly: true,
+          useErrorDialogs: true,
           stickyAuth: true,
         ),
       );
 
-      if (didAuthenticate) {
-        setState(() {
-          _isAuthenticated = true;
-          _statusMessage = 'Authentification réussie !';
-        });
+      if (mounted) {
+        if (isAuthorized) {
+          setState(() {
+            _isAuthenticated = true;
+            _isProcessing = false;
+            _statusMessage = 'Authentification réussie !';
+          });
 
-        // Start processing animation
-        await _processingController.forward();
+          // Start success animations
+          _successController.forward();
+          _backgroundController.forward();
 
-        // Navigate to home after processing animation
-        if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
-        }
-      } else {
-        _resetToInitialState();
-        setState(() {
-          _statusMessage = 'Authentification échouée. Réessayez.';
-        });
-      }
-    } catch (e) {
-      _resetToInitialState();
-      String errorMessage = 'Erreur d\'authentification';
+          // Start countdown
+          _startCountdown();
 
-      if (e is PlatformException) {
-        switch (e.code) {
-          case auth_error.notAvailable:
-            errorMessage = 'Authentification biométrique non disponible';
-            break;
-          case auth_error.notEnrolled:
-            errorMessage = 'Aucune empreinte enregistrée sur cet appareil';
-            break;
-          case auth_error.lockedOut:
-            errorMessage = 'Trop de tentatives. Réessayez plus tard.';
-            break;
-          default:
-            errorMessage = 'Authentification annulée ou échouée';
+          print('Authentication successful! Starting 4-second countdown...');
+        } else {
+          setState(() {
+            _isProcessing = false;
+            _statusMessage = 'Authentification échouée. Veuillez réessayer.';
+          });
+          print('Authentication failed.');
+          _pulseController.repeat(reverse: true);
         }
       }
-
-      setState(() {
-        _statusMessage = errorMessage;
-      });
+    } on PlatformException catch (e) {
+      print('PlatformException caught: $e');
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _isAuthenticated = false;
+          if (e.code == auth_error.notAvailable ||
+              e.code == auth_error.notEnrolled ||
+              e.code == auth_error.passcodeNotSet) {
+            _statusMessage = 'Veuillez configurer votre empreinte digitale.';
+          } else if (e.code == auth_error.otherOperatingSystem) {
+            _statusMessage = 'Fonctionnalité non prise en charge sur cet OS.';
+          } else {
+            _statusMessage = 'Une erreur est survenue: ${e.message}';
+          }
+        });
+        _pulseController.repeat(reverse: true);
+      }
     }
   }
 
-  void _resetToInitialState() {
-    setState(() {
-      _isProcessing = false;
-      _isAuthenticated = false;
+  void _startCountdown() {
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        _countdown--;
+        _statusMessage = 'Redirection vers l\'accueil dans $_countdown...';
+      });
+
+      if (_countdown <= 0) {
+        timer.cancel();
+        Navigator.of(context).pushReplacementNamed('/home');
+      }
     });
-    _processingController.reset();
-    _pulseController.repeat();
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
     _processingController.dispose();
+    _successController.dispose();
+    _backgroundController.dispose();
+    _fadeController.dispose();
+    _countdownTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text(
-          'Connexion Sécurisée',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w600,
+      body: AnimatedBuilder(
+        animation: _backgroundAnimation,
+        builder: (context, child) {
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: _isAuthenticated
+                    ? [
+                        const Color(0xFF0F1419),
+                        Color.lerp(
+                            const Color(0xFF0F1419),
+                            const Color(0xFF00D084).withOpacity(0.1),
+                            _backgroundAnimation.value)!,
+                        const Color(0xFF0F1419),
+                      ]
+                    : [
+                        const Color(0xFF0F1419),
+                        const Color(0xFF1E2A32),
+                        const Color(0xFF0F1419),
+                      ],
               ),
-        ),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: context.width * 0.08,
-            vertical: context.height * 0.05,
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Main Title
-              Text(
-                'Authentification\nBiométrique',
-                style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                textAlign: TextAlign.center,
-              ),
+            ),
+            child: SafeArea(
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // App Logo/Title with animation
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 500),
+                              transform: Matrix4.identity()
+                                ..translate(
+                                    0.0, _isAuthenticated ? -20.0 : 0.0),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withOpacity(0.1),
+                                      border: Border.all(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withOpacity(0.3),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Icon(
+                                      Icons.security,
+                                      size: 32,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  Text(
+                                    'Authentification Sécurisée',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineLarge
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: -0.5,
+                                        ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Utilisez votre empreinte digitale pour accéder',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withOpacity(0.7),
+                                        ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
-              SizedBox(height: context.height * 0.02),
+                      // Fingerprint Section
+                      Expanded(
+                        flex: 3,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Fingerprint container with enhanced design
+                            GestureDetector(
+                              onTap: () {
+                                if (!_isProcessing && !_isAuthenticated) {
+                                  setState(() {
+                                    _isProcessing = true;
+                                    _statusMessage =
+                                        'Authentification en cours...';
+                                  });
+                                  _pulseController.stop();
+                                  _processingController.forward();
+                                  _authenticate();
+                                }
+                              },
+                              child: Container(
+                                width: context.width * 0.4,
+                                height: context.width * 0.4,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: RadialGradient(
+                                    colors: [
+                                      Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withOpacity(0.1),
+                                      Colors.transparent,
+                                    ],
+                                  ),
+                                  border: Border.all(
+                                    color: _isAuthenticated
+                                        ? Theme.of(context).colorScheme.primary
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withOpacity(0.3),
+                                    width: 2,
+                                  ),
+                                  boxShadow: _isAuthenticated
+                                      ? [
+                                          BoxShadow(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withOpacity(0.3),
+                                            blurRadius: 20,
+                                            spreadRadius: 5,
+                                          ),
+                                        ]
+                                      : [],
+                                ),
+                                child: Center(
+                                  child: _buildFingerprintWidget(),
+                                ),
+                              ),
+                            ),
 
-              // Subtitle
-              Text(
-                'Utilisez votre empreinte digitale pour accéder à votre compte en toute sécurité',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).textTheme.bodySmall?.color,
-                    ),
-                textAlign: TextAlign.center,
-              ),
+                            const SizedBox(height: 32),
 
-              SizedBox(height: context.height * 0.08),
+                            // Status message with enhanced styling
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 16),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surface
+                                    .withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withOpacity(0.2),
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    _statusMessage,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge
+                                        ?.copyWith(
+                                          color: _isAuthenticated
+                                              ? Theme.of(context)
+                                                  .colorScheme
+                                                  .primary
+                                              : Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurface,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  if (_isAuthenticated && _countdown > 0)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 8),
+                                      child: LinearProgressIndicator(
+                                        value: (4 - _countdown) / 4,
+                                        backgroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withOpacity(0.2),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                          Theme.of(context).colorScheme.primary,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
 
-              // Fingerprint Icon with Animation
-              GestureDetector(
-                onTap: _authenticateWithFingerprint,
-                child: Container(
-                  width: context.width * 0.4,
-                  height: context.width * 0.4,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: _isAuthenticated
-                          ? [
-                              Theme.of(context).colorScheme.primary,
-                              Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withOpacity(0.8)
-                            ]
-                          : [
-                              Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withOpacity(0.3),
-                              Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withOpacity(0.1)
-                            ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.3),
-                        blurRadius: 20,
-                        spreadRadius: 5,
+                      // Bottom section
+                      Expanded(
+                        flex: 1,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 16,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withOpacity(0.5),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Touchez l\'icône d\'empreinte pour commencer',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.5),
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                  child: _isProcessing
-                      ? _buildProcessingIndicator()
-                      : _buildFingerprintIcon(),
                 ),
               ),
-
-              SizedBox(height: context.height * 0.06),
-
-              // Status Message
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Theme.of(context).dividerColor,
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  _statusMessage,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: _isAuthenticated
-                            ? Theme.of(context).colorScheme.primary
-                            : _statusMessage.contains('Erreur') ||
-                                    _statusMessage.contains('échouée') ||
-                                    _statusMessage.contains('annulée')
-                                ? Colors.red.shade400
-                                : Theme.of(context).textTheme.bodyMedium?.color,
-                        fontWeight: FontWeight.w500,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-
-              SizedBox(height: context.height * 0.04),
-
-              // Help text
-              if (!_isProcessing && !_isAuthenticated)
-                Text(
-                  'Vous rencontrez des difficultés ? Contactez notre support.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).textTheme.bodySmall?.color,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildFingerprintIcon() {
-    return AnimatedBuilder(
-      animation: _pulseAnimation,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _pulseAnimation.value,
-          child: Icon(
-            Icons.fingerprint,
-            size: context.width * 0.15,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildProcessingIndicator() {
-    return AnimatedBuilder(
-      animation: _processingAnimation,
-      builder: (context, child) {
-        if (_isAuthenticated) {
+  Widget _buildFingerprintWidget() {
+    if (_isAuthenticated) {
+      return AnimatedBuilder(
+        animation: _successAnimation,
+        builder: (context, child) {
           return Transform.scale(
-            scale: _processingAnimation.value,
-            child: Icon(
-              Icons.check_circle,
-              size: context.width * 0.15,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          );
-        } else {
-          return SizedBox(
-            width: context.width * 0.15,
-            height: context.width * 0.15,
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(
-                Theme.of(context).colorScheme.primary,
+            scale: _successAnimation.value,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
               ),
-              strokeWidth: context.width * 0.01,
+              child: Icon(
+                Icons.check_circle,
+                size: context.width * 0.15,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
           );
-        }
-      },
-    );
+        },
+      );
+    } else if (_isProcessing) {
+      return AnimatedBuilder(
+        animation: _processingAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: 0.8 + (_processingAnimation.value * 0.3),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: context.width * 0.15,
+                  height: context.width * 0.15,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.fingerprint,
+                  size: context.width * 0.08,
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    } else {
+      return AnimatedBuilder(
+        animation: _pulseAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _pulseAnimation.value,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              ),
+              child: Icon(
+                Icons.fingerprint,
+                size: context.width * 0.15,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          );
+        },
+      );
+    }
   }
 }

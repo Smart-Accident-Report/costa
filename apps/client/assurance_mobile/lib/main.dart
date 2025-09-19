@@ -1,6 +1,7 @@
 import 'package:assurance_mobile/features/create_insurance/presentation/bloc/create_insurance_bloc.dart';
 import 'package:assurance_mobile/features/create_insurance/presentation/screen/create_insurance_screen.dart';
 import 'package:assurance_mobile/features/create_insurance/presentation/screen/login_with_finger_prints.dart';
+import 'package:assurance_mobile/features/home/presentation/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -74,6 +75,8 @@ class MyApp extends StatelessWidget {
         return _createRoute(CreateInsuranceScreen());
       case '/login_with_finger_print':
         return _createRoute(LoginWithFingerPrints());
+      case '/home':
+        return _createRoute(HomeScreen());
 
       default:
         return _createRoute(
