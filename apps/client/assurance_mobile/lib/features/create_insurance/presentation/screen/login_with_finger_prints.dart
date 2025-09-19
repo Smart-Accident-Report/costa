@@ -292,35 +292,6 @@ class _LoginWithFingerPrintsState extends State<LoginWithFingerPrints>
                 ),
               ),
 
-              SizedBox(height: context.height * 0.08),
-
-              // Alternative Login Button
-              if (!_isProcessing && !_isAuthenticated)
-                Container(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.pushReplacementNamed(context, '/login');
-                    },
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(
-                        color: Theme.of(context).colorScheme.primary,
-                        width: 1,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'Utiliser un mot de passe',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                    ),
-                  ),
-                ),
-
               SizedBox(height: context.height * 0.04),
 
               // Help text
