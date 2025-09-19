@@ -46,6 +46,7 @@ dependencies:
   flutter_otp_text_field: ^1.5.1+1
   get_it: ^8.2.0
   camera: ^0.11.2
+  local_auth: ^2.3.0
 
 dev_dependencies:
   flutter_test:
