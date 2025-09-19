@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package insurance;
+
+import "google/protobuf/timestamp.proto";
+
+message Insurance {
+  int64 id = 1;
+  int64 vehicle_id = 2;
+  bool assuree = 3;
+  string assure_nom = 4;
+  string assure_prenom = 5;
+  string assure_adresse = 6;
+  string company = 7;
+  string policy_number = 8;
+  google.protobuf.Timestamp valid_from = 9;
+  google.protobuf.Timestamp valid_to = 10;
+  string agency_code = 11;
+  string coverage_type = 12;
+  string assurance_path = 13;
+}
+
+message CreateInsuranceRequest { Insurance insurance = 1; }
+message CreateInsuranceResponse { Insurance insurance = 1; }
+message GetInsuranceRequest { int64 id = 1; }
+message GetInsuranceResponse { Insurance insurance = 1; }
+message UpdateInsuranceRequest { Insurance insurance = 1; }
+message UpdateInsuranceResponse { Insurance insurance = 1; }
+message DeleteInsuranceRequest { int64 id = 1; }
+message DeleteInsuranceResponse {}
+
+service InsuranceService {
+  rpc CreateInsurance(CreateInsuranceRequest) returns (CreateInsuranceResponse);
+  rpc GetInsurance(GetInsuranceRequest) returns (GetInsuranceResponse);
+  rpc UpdateInsurance(UpdateInsuranceRequest) returns (UpdateInsuranceResponse);
+  rpc DeleteInsurance(DeleteInsuranceRequest) returns (DeleteInsuranceResponse);
+}

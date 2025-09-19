@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package insurance;
+
+import "google/protobuf/timestamp.proto";
+
+message Accident {
+  int64 id = 1;
+  google.protobuf.Timestamp date_time = 2;
+  string location = 3;
+  string circonstances = 4;
+  int64 vehicle_a_id = 5;
+  int64 driver_a_id = 6;
+  string point_de_choc_a = 7;
+  string degats_apparents_a = 8;
+  string observations_a = 9;
+  string pv_police_a = 10;
+  string pv_gendarmerie_a = 11;
+  int64 vehicle_b_id = 12;
+  int64 driver_b_id = 13;
+  string point_de_choc_b = 14;
+  string degats_apparents_b = 15;
+  string observations_b = 16;
+  string pv_police_b = 17;
+  string pv_gendarmerie_b = 18;
+  string status = 19;
+}
+
+message CreateAccidentRequest { Accident accident = 1; }
+message CreateAccidentResponse { Accident accident = 1; }
+message GetAccidentRequest { int64 id = 1; }
+message GetAccidentResponse { Accident accident = 1; }
+message UpdateAccidentRequest { Accident accident = 1; }
+message UpdateAccidentResponse { Accident accident = 1; }
+message DeleteAccidentRequest { int64 id = 1; }
+message DeleteAccidentResponse {}
+
+service AccidentService {
+  rpc CreateAccident(CreateAccidentRequest) returns (CreateAccidentResponse);
+  rpc GetAccident(GetAccidentRequest) returns (GetAccidentResponse);
+  rpc UpdateAccident(UpdateAccidentRequest) returns (UpdateAccidentResponse);
+  rpc DeleteAccident(DeleteAccidentRequest) returns (DeleteAccidentResponse);
+}
