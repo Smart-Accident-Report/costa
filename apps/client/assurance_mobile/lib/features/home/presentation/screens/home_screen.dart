@@ -413,6 +413,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               borderRadius: BorderRadius.circular(16),
                               onTap: () {
                                 HapticFeedback.heavyImpact();
+                                Navigator.of(context).pushNamed('/constat');
                               },
                               child: const Center(
                                 child: Row(
