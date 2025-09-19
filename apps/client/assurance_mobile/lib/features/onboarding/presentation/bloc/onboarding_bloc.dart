@@ -17,7 +17,7 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       emit(OnboardingLoading());
       final seen = await getSeen();
       if (seen) {
-        emit(const OnboardingComplete(route: '/create_insurance'));
+        emit(const OnboardingComplete(route: '/login_with_finger_print'));
       } else {
         emit(OnboardingRequired());
       }
