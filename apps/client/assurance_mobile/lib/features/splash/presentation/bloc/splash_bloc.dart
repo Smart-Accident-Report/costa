@@ -23,12 +23,23 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
   ) async {
     emit(const SplashLoading());
     try {
-      await Future.delayed(const Duration(seconds: 5));
+      // Simulate app initialization delay
+      await Future.delayed(const Duration(seconds: 2));
 
-      emit(const SplashLoaded(route: '/onboarding'));
+      // Check if onboarding has been seen
+      final onboardingSeen = await getOnboardingSeen.call();
+
+      if (onboardingSeen) {
+        // If onboarding is complete, navigate directly to create insurance
+        emit(const SplashLoaded(route: '/create_insurance'));
+      } else {
+        // If onboarding has not been seen, show the onboarding screen
+        emit(const SplashLoaded(route: '/onboarding'));
+      }
     } catch (e) {
-      emit(const SplashLoaded(route: '/create_insurance'));
+      // Handle potential errors gracefully and navigate to a default route
       emit(SplashError(message: e.toString()));
+      emit(const SplashLoaded(route: '/onboarding'));
     }
   }
 }
