@@ -10,7 +10,7 @@ class CreateInsuranceScreen extends StatefulWidget {
 
 class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
     with TickerProviderStateMixin {
-  final _pageController = PageController();
+  var _pageController = PageController();
   final _formKeys = List.generate(3, (index) => GlobalKey<FormState>());
 
   int _currentStep = 0;
@@ -18,10 +18,6 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
   // Document scanning states
   bool _carteGriseScanned = false;
   bool _drivingLicenseScanned = false;
-
-  // Extracted data from documents
-  Map<String, dynamic> _extractedCarData = {};
-  Map<String, dynamic> _extractedDriverData = {};
 
   // User input data
   String? _selectedPuissanceMoteur;
@@ -37,10 +33,68 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
   bool _paymentCCP = false;
   bool _isUnder25 = false;
   bool _isPermitOverAYear = false;
+  String? _selectedValeurVenale;
+  String? _selectedNom;
+  String? _selectedPrenom;
+  String? _selectedDateNaissance;
+  String? _selectedNumPermis;
+  String? _selectedDatePermis;
+  String? _selectedTypePermis;
+  String? _selectedNumChassis;
+  String? _selectedEnergie;
+  String? _selectedTypeMatricule;
+  late final TextEditingController _nomController;
+  late final TextEditingController _prenomController;
+  late final TextEditingController _dateNaissanceController;
+  late final TextEditingController _numPermisController;
+  late final TextEditingController _datePermisController;
+  late final TextEditingController _typePermisController;
+  late final TextEditingController _numChassisController;
+  late final TextEditingController _energieController;
+  late final TextEditingController _marqueController;
+  late final TextEditingController _modeleController;
+  late final TextEditingController _anneeController;
+  late final TextEditingController _valeurVenaleController;
+  late final TextEditingController _wilayaController;
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    // Initialize controllers
+    _nomController = TextEditingController(text: _selectedNom);
+    _prenomController = TextEditingController(text: _selectedPrenom);
+    _dateNaissanceController =
+        TextEditingController(text: _selectedDateNaissance);
+    _numPermisController = TextEditingController(text: _selectedNumPermis);
+    _datePermisController = TextEditingController(text: _selectedDatePermis);
+    _typePermisController = TextEditingController(text: _selectedTypePermis);
+    _numChassisController = TextEditingController(text: _selectedNumChassis);
+    _energieController = TextEditingController(text: _selectedEnergie);
+    _marqueController = TextEditingController(text: _selectedMarque);
+    _modeleController = TextEditingController(text: _selectedModele);
+    _anneeController = TextEditingController(text: _selectedAnnee);
+    _valeurVenaleController =
+        TextEditingController(text: _selectedValeurVenale);
+    _wilayaController = TextEditingController(text: _selectedWilaya);
+  }
 
   @override
   void dispose() {
     _pageController.dispose();
+
+    _nomController.dispose();
+    _prenomController.dispose();
+    _dateNaissanceController.dispose();
+    _numPermisController.dispose();
+    _datePermisController.dispose();
+    _typePermisController.dispose();
+    _numChassisController.dispose();
+    _energieController.dispose();
+    _marqueController.dispose();
+    _modeleController.dispose();
+    _anneeController.dispose();
+    _valeurVenaleController.dispose();
+    _wilayaController.dispose();
     super.dispose();
   }
 
@@ -158,15 +212,39 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
       setState(() {
         if (documentType == 'carte_grise') {
           _carteGriseScanned = true;
-          _extractedCarData = result;
-          // Auto-fill form fields
+          // Auto-fill all carte grise related fields
           _selectedMarque = result['marque'];
           _selectedModele = result['modele'];
           _selectedAnnee = result['annee'];
           _selectedWilaya = result['wilaya'];
+          _selectedPuissanceMoteur = result['puissance_moteur'];
+          _selectedNombrePlaces = result['nombre_places'];
+          _selectedValeurVenale = result['valeur_venale'];
+          _selectedNumChassis = result['num_chassis'];
+          _selectedEnergie = result['energie'];
+          _selectedTypeMatricule = result['type_matricule'];
+          _numChassisController.text = result['num_chassis'] ?? '';
+          _energieController.text = result['energie'] ?? '';
+          _marqueController.text = result['marque'] ?? '';
+          _modeleController.text = result['modele'] ?? '';
+          _anneeController.text = result['annee'] ?? '';
+          _valeurVenaleController.text = result['valeur_venale'] ?? '';
+          _wilayaController.text = result['wilaya'] ?? '';
         } else if (documentType == 'permis_conduire') {
           _drivingLicenseScanned = true;
-          _extractedDriverData = result;
+          // Auto-fill all permis de conduire related fields
+          _selectedNom = result['nom'];
+          _selectedPrenom = result['prenom'];
+          _selectedDateNaissance = result['date_naissance'];
+          _selectedNumPermis = result['num_permis'];
+          _selectedDatePermis = result['date_permis'];
+          _selectedTypePermis = result['type_permis'];
+          _nomController.text = result['nom'] ?? '';
+          _prenomController.text = result['prenom'] ?? '';
+          _dateNaissanceController.text = result['date_naissance'] ?? '';
+          _numPermisController.text = result['num_permis'] ?? '';
+          _datePermisController.text = result['date_permis'] ?? '';
+          _typePermisController.text = result['type_permis'] ?? '';
         }
       });
 
@@ -346,9 +424,8 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
 
   Widget _buildCustomTextField({
     required String label,
-    String? initialValue,
+    TextEditingController? controller,
     TextInputType? keyboardType,
-    FormFieldSetter<String>? onSaved,
     String? Function(String?)? validator,
   }) {
     return Container(
@@ -358,9 +435,8 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
           labelText: label,
           labelStyle: Theme.of(context).textTheme.titleSmall,
         ),
-        initialValue: initialValue,
+        controller: controller,
         keyboardType: keyboardType,
-        onSaved: onSaved,
         validator: validator,
         style: Theme.of(context).textTheme.bodyMedium,
       ),
@@ -487,25 +563,22 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
 
               _buildCustomTextField(
                 label: 'Marque',
-                initialValue: _selectedMarque ?? _extractedCarData['marque'],
-                onSaved: (value) => _selectedMarque = value,
+                controller: _marqueController,
                 validator: (value) =>
                     value?.isEmpty == true ? 'Veuillez saisir la marque' : null,
               ),
 
               _buildCustomTextField(
                 label: 'Modèle',
-                initialValue: _selectedModele ?? _extractedCarData['modele'],
-                onSaved: (value) => _selectedModele = value,
+                controller: _modeleController,
                 validator: (value) =>
                     value?.isEmpty == true ? 'Veuillez saisir le modèle' : null,
               ),
 
               _buildCustomTextField(
                 label: 'Année',
-                initialValue: _selectedAnnee ?? _extractedCarData['annee'],
                 keyboardType: TextInputType.number,
-                onSaved: (value) => _selectedAnnee = value,
+                controller: _anneeController,
                 validator: (value) =>
                     value?.isEmpty == true ? 'Veuillez saisir l\'année' : null,
               ),
@@ -513,8 +586,7 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
               _buildCustomTextField(
                 label: 'Valeur vénale du véhicule',
                 keyboardType: TextInputType.number,
-                onSaved: (value) =>
-                    _valeurVenale = double.tryParse(value ?? ''),
+                controller: _valeurVenaleController,
                 validator: (value) => value?.isEmpty == true
                     ? 'Veuillez saisir la valeur vénale'
                     : null,
@@ -522,8 +594,7 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
 
               _buildCustomTextField(
                 label: 'Wilaya',
-                initialValue: _selectedWilaya ?? _extractedCarData['wilaya'],
-                onSaved: (value) => _selectedWilaya = value,
+                controller: _wilayaController,
                 validator: (value) =>
                     value?.isEmpty == true ? 'Veuillez saisir la wilaya' : null,
               ),
@@ -777,25 +848,21 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
 
               _buildCustomTextField(
                 label: 'Nom',
-                initialValue: _extractedDriverData['nom'],
-                onSaved: (value) => _extractedDriverData['nom'] = value,
+                controller: _nomController,
                 validator: (value) =>
                     value?.isEmpty == true ? 'Veuillez saisir le nom' : null,
               ),
 
               _buildCustomTextField(
                 label: 'Prénom',
-                initialValue: _extractedDriverData['prenom'],
-                onSaved: (value) => _extractedDriverData['prenom'] = value,
+                controller: _prenomController,
                 validator: (value) =>
                     value?.isEmpty == true ? 'Veuillez saisir le prénom' : null,
               ),
 
               _buildCustomTextField(
                 label: 'Date de naissance',
-                initialValue: _extractedDriverData['date_naissance'],
-                onSaved: (value) =>
-                    _extractedDriverData['date_naissance'] = value,
+                controller: _dateNaissanceController,
                 validator: (value) => value?.isEmpty == true
                     ? 'Veuillez saisir la date de naissance'
                     : null,
@@ -803,8 +870,7 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
 
               _buildCustomTextField(
                 label: 'Numéro de permis',
-                initialValue: _extractedDriverData['num_permis'],
-                onSaved: (value) => _extractedDriverData['num_permis'] = value,
+                controller: _numPermisController,
                 validator: (value) => value?.isEmpty == true
                     ? 'Veuillez saisir le numéro de permis'
                     : null,
@@ -812,8 +878,7 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
 
               _buildCustomTextField(
                 label: 'Date de permis',
-                initialValue: _extractedDriverData['date_permis'],
-                onSaved: (value) => _extractedDriverData['date_permis'] = value,
+                controller: _datePermisController,
                 validator: (value) => value?.isEmpty == true
                     ? 'Veuillez saisir la date de permis'
                     : null,
@@ -821,8 +886,7 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
 
               _buildCustomTextField(
                 label: 'Type de permis',
-                initialValue: _extractedDriverData['type_permis'],
-                onSaved: (value) => _extractedDriverData['type_permis'] = value,
+                controller: _typePermisController,
                 validator: (value) => value?.isEmpty == true
                     ? 'Veuillez saisir le type de permis'
                     : null,
@@ -830,8 +894,7 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
 
               _buildCustomTextField(
                 label: 'Numéro de châssis',
-                initialValue: _extractedCarData['num_chassis'],
-                onSaved: (value) => _extractedCarData['num_chassis'] = value,
+                controller: _numChassisController,
                 validator: (value) => value?.isEmpty == true
                     ? 'Veuillez saisir le numéro de châssis'
                     : null,
@@ -839,8 +902,7 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
 
               _buildCustomTextField(
                 label: 'Énergie',
-                initialValue: _extractedCarData['energie'],
-                onSaved: (value) => _extractedCarData['energie'] = value,
+                controller: _energieController,
                 validator: (value) => value?.isEmpty == true
                     ? 'Veuillez saisir l\'énergie'
                     : null,
@@ -849,9 +911,9 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
               _buildCustomDropdown(
                 label: 'Type de matricule',
                 items: ['provisoire', 'permanent 11 digits', '10 digits'],
-                value: _extractedCarData['type_matricule'],
+                value: _selectedTypeMatricule,
                 onChanged: (value) =>
-                    setState(() => _extractedCarData['type_matricule'] = value),
+                    setState(() => _selectedTypeMatricule = value),
                 validator: (value) => value == null
                     ? 'Veuillez sélectionner le type de matricule'
                     : null,
