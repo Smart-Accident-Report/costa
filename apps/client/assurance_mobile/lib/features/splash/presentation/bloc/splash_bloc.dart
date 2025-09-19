@@ -24,7 +24,7 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
     emit(const SplashLoading());
     try {
       // Simulate app initialization delay
-      await Future.delayed(const Duration(seconds: 2));
+      await Future.delayed(const Duration(seconds: 5));
 
       // Check if onboarding has been seen
       final onboardingSeen = await getOnboardingSeen.call();

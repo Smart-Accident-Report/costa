@@ -292,7 +292,9 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () {
-                          Navigator.of(context).pop();
+                          if (mounted) {
+                            Navigator.of(context).pop();
+                          }
                         },
                         child: const Text('Annuler'),
                       ),
@@ -301,20 +303,30 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () async {
-                          Navigator.of(context).pop();
-                          _showProcessingDialog();
+                          // Pop the first dialog
+                          if (mounted) {
+                            Navigator.of(context).pop();
+                          }
 
-                          // Perform biometric authentication
-                          final authenticated =
-                              await _authenticateWithFingerprint();
+                          // Ensure widget is still mounted before showing processing dialog
+                          if (mounted) {
+                            _showProcessingDialog();
 
-                          Navigator.of(context)
-                              .pop(); // Close processing dialog
+                            // Perform biometric authentication
+                            final authenticated =
+                                await _authenticateWithFingerprint();
 
-                          if (authenticated) {
-                            _showSuccessDialog();
-                          } else {
-                            _showAuthFailedDialog();
+                            // Check if the widget is still in the tree before popping the second dialog
+                            if (mounted) {
+                              Navigator.of(context)
+                                  .pop(); // Close processing dialog
+
+                              if (authenticated) {
+                                _showSuccessDialog();
+                              } else {
+                                _showAuthFailedDialog();
+                              }
+                            }
                           }
                         },
                         child: const Text('Authentifier'),
