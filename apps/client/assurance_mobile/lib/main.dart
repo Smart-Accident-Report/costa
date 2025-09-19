@@ -1,7 +1,12 @@
 import 'package:assurance_mobile/features/create_insurance/presentation/bloc/create_insurance_bloc.dart';
 import 'package:assurance_mobile/features/create_insurance/presentation/screen/create_insurance_screen.dart';
 import 'package:assurance_mobile/features/create_insurance/presentation/screen/login_with_finger_prints.dart';
+import 'package:assurance_mobile/features/home/presentation/screens/conducteurs_screen.dart';
+import 'package:assurance_mobile/features/home/presentation/screens/constat_screen.dart';
 import 'package:assurance_mobile/features/home/presentation/screens/home_screen.dart';
+import 'package:assurance_mobile/features/home/presentation/screens/insurance_screen.dart';
+import 'package:assurance_mobile/features/home/presentation/screens/scan_accident_screen.dart';
+import 'package:assurance_mobile/features/home/presentation/screens/vehicule_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -77,7 +82,16 @@ class MyApp extends StatelessWidget {
         return _createRoute(LoginWithFingerPrints());
       case '/home':
         return _createRoute(HomeScreen());
-
+      case '/constat':
+        return _createRoute(ConstatScreen());
+      case '/conducteur':
+        return _createRoute(ConducteursScreen());
+      case '/vehicule':
+        return _createRoute(VehiculeScreen());
+      case '/insurance':
+        return _createRoute(InsuranceScreen());
+      case '/scan_accident_screen':
+        return _createRoute(ScanAccidentScreen());
       default:
         return _createRoute(
           const Scaffold(

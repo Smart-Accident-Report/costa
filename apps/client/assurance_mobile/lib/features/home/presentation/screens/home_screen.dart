@@ -959,22 +959,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  // Navigation methods - replace with your actual navigation
-
-  // Navigation methods - replace with your actual navigation logic
   void _navigateToConstats() {
-    // Navigator.pushNamed(context, '/constats');
+    Navigator.pushNamed(context, '/constats');
   }
 
   void _navigateToConducteurs() {
-    // Navigator.pushNamed(context, '/conducteurs');
+    Navigator.pushNamed(context, '/conducteurs');
   }
 
   void _navigateToVehicle() {
-    // Navigator.pushNamed(context, '/vehicle');
+    Navigator.pushNamed(context, '/vehicle');
   }
 
   void _navigateToInsurance() {
-    // Navigator.pushNamed(context, '/insurance');
+    Navigator.pushNamed(context, '/insurance');
   }
 }
