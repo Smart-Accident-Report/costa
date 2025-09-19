@@ -2,16 +2,11 @@ import '../../domain/entities/insurance_entity.dart';
 
 class InsuranceModel extends InsuranceEntity {
   const InsuranceModel({
-    required String userId,
-    required String company,
-    required String type,
-    required String carDocumentsUrl,
-  }) : super(
-          userId: userId,
-          company: company,
-          type: type,
-          carDocumentsUrl: carDocumentsUrl,
-        );
+    required super.userId,
+    required super.company,
+    required super.type,
+    required super.carDocumentsUrl,
+  });
 
   factory InsuranceModel.fromJson(Map<String, dynamic> json) {
     return InsuranceModel(
