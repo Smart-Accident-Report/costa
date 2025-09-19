@@ -128,7 +128,7 @@ class _ConstatScreenState extends State<ConstatScreen>
 
   void _initializeSpeechAndTTS() async {
     // Initialize Deepgram Speech-to-Text
-    deepgram = Deepgram('YOUR_DEEPGRAM_API_KEY');
+    deepgram = Deepgram('04eb4a5a0b5f7bc74f75419c43e9ee3cc646a5b6');
 
     // Initialize Flutter TTS
     flutterTts = FlutterTts();
