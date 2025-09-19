@@ -198,6 +198,9 @@ class _CameraScanScreenState extends State<CameraScanScreen>
         'num_chassis': 'VF3XXXXXXXXXXXXXXX',
         'energie': 'Essence',
         'type_matricule': 'permanent 11 digits',
+        'puissance_moteur': '7-10cv',
+        'nombre_places': '5',
+        'valeur_venale': '2500000',
       };
     } else if (widget.documentType == 'permis_conduire') {
       return {
