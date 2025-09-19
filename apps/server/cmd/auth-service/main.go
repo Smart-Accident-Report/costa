@@ -7,12 +7,10 @@ import (
 	"github.com/Smart-Accident-Report/costa/internal/auth/database"
 	"github.com/Smart-Accident-Report/costa/internal/auth/handler"
 	"github.com/Smart-Accident-Report/costa/internal/auth/service"
-	"github.com/joho/godotenv"
 	pb "github.com/Smart-Accident-Report/costa/rpc/auth"
 )
 
 func main() {
-	godotenv.Load()
 	db := database.InitDB()
 
 	authService := service.NewAuthService(db)

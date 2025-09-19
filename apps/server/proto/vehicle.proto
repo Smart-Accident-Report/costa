@@ -1,8 +1,7 @@
 syntax = "proto3";
 
-package insurance;
-
-import "google/protobuf/timestamp.proto";
+package vehicle;
+option go_package = "/rpc/vehicle;vehicle";
 
 message Vehicle {
   int64 id = 1;
@@ -24,13 +23,113 @@ message Vehicle {
   string carte_grise_path = 17;
 }
 
-message CreateVehicleRequest { Vehicle vehicle = 1; }
-message CreateVehicleResponse { Vehicle vehicle = 1; }
-message GetVehicleRequest { int64 id = 1; }
-message GetVehicleResponse { Vehicle vehicle = 1; }
-message UpdateVehicleRequest { Vehicle vehicle = 1; }
-message UpdateVehicleResponse { Vehicle vehicle = 1; }
-message DeleteVehicleRequest { int64 id = 1; }
+message CreateVehicleRequest {
+  int64 owner_id = 1;
+  string brand = 2;
+  string model = 3;
+  int32 year = 4;
+  string engine_power = 5;
+  int32 seats = 6;
+  string chassis_number = 7;
+  string license_plate = 8;
+  string energy = 9;
+  string vehicle_type = 10;
+  int32 wilaya = 11;
+  double valeur_venale = 12;
+  bool paiement_ccp = 13;
+  bool moins25_ans = 14;
+  bool permis_plus1_an = 15;
+  string carte_grise_path = 16;
+}
+
+message CreateVehicleResponse {
+  int64 id = 1;
+  int64 owner_id = 2;
+  string brand = 3;
+  string model = 4;
+  int32 year = 5;
+  string engine_power = 6;
+  int32 seats = 7;
+  string chassis_number = 8;
+  string license_plate = 9;
+  string energy = 10;
+  string vehicle_type = 11;
+  int32 wilaya = 12;
+  double valeur_venale = 13;
+  bool paiement_ccp = 14;
+  bool moins_25_ans = 15;
+  bool permis_plus_1an = 16;
+  string carte_grise_path = 17;
+}
+
+message GetVehicleRequest { 
+  int64 id = 1; 
+}
+
+message GetVehicleResponse {
+  int64 id = 1;
+  int64 owner_id = 2;
+  string brand = 3;
+  string model = 4;
+  int32 year = 5;
+  string engine_power = 6;
+  int32 seats = 7;
+  string chassis_number = 8;
+  string license_plate = 9;
+  string energy = 10;
+  string vehicle_type = 11;
+  int32 wilaya = 12;
+  double valeur_venale = 13;
+  bool paiement_ccp = 14;
+  bool moins_25_ans = 15;
+  bool permis_plus_1an = 16;
+  string carte_grise_path = 17;
+}
+
+message UpdateVehicleRequest {
+  int64 id = 1;
+  int64 owner_id = 2;
+  string brand = 3;
+  string model = 4;
+  int32 year = 5;
+  string engine_power = 6;
+  int32 seats = 7;
+  string chassis_number = 8;
+  string license_plate = 9;
+  string energy = 10;
+  string vehicle_type = 11;
+  int32 wilaya = 12;
+  double valeur_venale = 13;
+  bool paiement_ccp = 14;
+  bool moins_25_ans = 15;
+  bool permis_plus_1an = 16;
+  string carte_grise_path = 17;
+}
+
+message UpdateVehicleResponse {
+  int64 id = 1;
+  int64 owner_id = 2;
+  string brand = 3;
+  string model = 4;
+  int32 year = 5;
+  string engine_power = 6;
+  int32 seats = 7;
+  string chassis_number = 8;
+  string license_plate = 9;
+  string energy = 10;
+  string vehicle_type = 11;
+  int32 wilaya = 12;
+  double valeur_venale = 13;
+  bool paiement_ccp = 14;
+  bool moins_25_ans = 15;
+  bool permis_plus_1an = 16;
+  string carte_grise_path = 17;
+}
+
+message DeleteVehicleRequest { 
+  int64 id = 1; 
+}
+
 message DeleteVehicleResponse {}
 
 service VehicleService {

@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package insurance;
+option go_package = "/rpc/insurance;insurance";
 
 import "google/protobuf/timestamp.proto";
 
@@ -20,13 +21,93 @@ message Insurance {
   string assurance_path = 13;
 }
 
-message CreateInsuranceRequest { Insurance insurance = 1; }
-message CreateInsuranceResponse { Insurance insurance = 1; }
-message GetInsuranceRequest { int64 id = 1; }
-message GetInsuranceResponse { Insurance insurance = 1; }
-message UpdateInsuranceRequest { Insurance insurance = 1; }
-message UpdateInsuranceResponse { Insurance insurance = 1; }
-message DeleteInsuranceRequest { int64 id = 1; }
+message CreateInsuranceRequest {
+  int64 vehicle_id = 1;
+  bool assuree = 2;
+  string assure_nom = 3;
+  string assure_prenom = 4;
+  string assure_adresse = 5;
+  string company = 6;
+  string policy_number = 7;
+  google.protobuf.Timestamp valid_from = 8;
+  google.protobuf.Timestamp valid_to = 9;
+  string agency_code = 10;
+  string coverage_type = 11;
+  string assurance_path = 12;
+}
+
+message CreateInsuranceResponse {
+  int64 id = 1;
+  int64 vehicle_id = 2;
+  bool assuree = 3;
+  string assure_nom = 4;
+  string assure_prenom = 5;
+  string assure_adresse = 6;
+  string company = 7;
+  string policy_number = 8;
+  google.protobuf.Timestamp valid_from = 9;
+  google.protobuf.Timestamp valid_to = 10;
+  string agency_code = 11;
+  string coverage_type = 12;
+  string assurance_path = 13;
+}
+
+message GetInsuranceRequest { 
+  int64 id = 1; 
+}
+
+message GetInsuranceResponse {
+  int64 id = 1;
+  int64 vehicle_id = 2;
+  bool assuree = 3;
+  string assure_nom = 4;
+  string assure_prenom = 5;
+  string assure_adresse = 6;
+  string company = 7;
+  string policy_number = 8;
+  google.protobuf.Timestamp valid_from = 9;
+  google.protobuf.Timestamp valid_to = 10;
+  string agency_code = 11;
+  string coverage_type = 12;
+  string assurance_path = 13;
+}
+
+message UpdateInsuranceRequest {
+  int64 id = 1;
+  int64 vehicle_id = 2;
+  bool assuree = 3;
+  string assure_nom = 4;
+  string assure_prenom = 5;
+  string assure_adresse = 6;
+  string company = 7;
+  string policy_number = 8;
+  google.protobuf.Timestamp valid_from = 9;
+  google.protobuf.Timestamp valid_to = 10;
+  string agency_code = 11;
+  string coverage_type = 12;
+  string assurance_path = 13;
+}
+
+message UpdateInsuranceResponse {
+  int64 id = 1;
+  int64 vehicle_id = 2;
+  bool assuree = 3;
+  string assure_nom = 4;
+  string assure_prenom = 5;
+  string assure_adresse = 6;
+  string company = 7;
+  string policy_number = 8;
+  google.protobuf.Timestamp valid_from = 9;
+  google.protobuf.Timestamp valid_to = 10;
+  string agency_code = 11;
+  string coverage_type = 12;
+  string assurance_path = 13;
+}
+
+message DeleteInsuranceRequest { 
+  int64 id = 1; 
+}
+
 message DeleteInsuranceResponse {}
 
 service InsuranceService {
