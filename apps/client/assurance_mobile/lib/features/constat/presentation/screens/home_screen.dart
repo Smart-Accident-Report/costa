@@ -961,15 +961,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _navigateToConstats() {
-    Navigator.pushNamed(context, '/constats');
+    Navigator.pushNamed(context, '/mes_constats');
   }
 
   void _navigateToConducteurs() {
-    Navigator.pushNamed(context, '/conducteurs');
+    Navigator.pushNamed(context, '/conducteur');
   }
 
   void _navigateToVehicle() {
-    Navigator.pushNamed(context, '/vehicle');
+    Navigator.pushNamed(context, '/vehicule');
   }
 
   void _navigateToInsurance() {

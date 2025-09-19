@@ -1,12 +1,13 @@
 import 'package:assurance_mobile/features/create_insurance/presentation/bloc/create_insurance_bloc.dart';
 import 'package:assurance_mobile/features/create_insurance/presentation/screen/create_insurance_screen.dart';
 import 'package:assurance_mobile/features/create_insurance/presentation/screen/login_with_finger_prints.dart';
-import 'package:assurance_mobile/features/home/presentation/screens/conducteurs_screen.dart';
-import 'package:assurance_mobile/features/home/presentation/screens/constat_screen.dart';
-import 'package:assurance_mobile/features/home/presentation/screens/home_screen.dart';
-import 'package:assurance_mobile/features/home/presentation/screens/insurance_screen.dart';
-import 'package:assurance_mobile/features/home/presentation/screens/scan_accident_screen.dart';
-import 'package:assurance_mobile/features/home/presentation/screens/vehicule_screen.dart';
+import 'package:assurance_mobile/features/constat/presentation/screens/conducteurs_screen.dart';
+import 'package:assurance_mobile/features/constat/presentation/screens/constat_screen.dart';
+import 'package:assurance_mobile/features/constat/presentation/screens/home_screen.dart';
+import 'package:assurance_mobile/features/constat/presentation/screens/insurance_screen.dart';
+import 'package:assurance_mobile/features/constat/presentation/screens/mes_constats_screen.dart';
+import 'package:assurance_mobile/features/constat/presentation/screens/scan_accident_screen.dart';
+import 'package:assurance_mobile/features/constat/presentation/screens/vehicule_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -90,15 +91,15 @@ class MyApp extends StatelessWidget {
         return _createRoute(VehiculeScreen());
       case '/insurance':
         return _createRoute(InsuranceScreen());
+      case '/mes_constats':
+        return _createRoute(MesConstatsScreen());
       case '/scan_accident_screen':
-        // Handle the arguments for ScanAccidentScreen
         final args = settings.arguments as Map<String, dynamic>?;
         if (args != null && args.containsKey('scanType')) {
           final scanType = args['scanType'] as String;
-          // Example of a simple callback to handle the result
+
           void onScanComplete(Map<String, dynamic> result) {
             print('Scan completed with result: $result');
-            // You can add more logic here, like updating a state or navigating
           }
 
           return _createRoute(
@@ -108,7 +109,7 @@ class MyApp extends StatelessWidget {
             ),
           );
         }
-        // Fallback if arguments are missing
+
         return _createRoute(
           const Scaffold(
             body: Center(
