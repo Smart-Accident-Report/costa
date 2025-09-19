@@ -91,7 +91,32 @@ class MyApp extends StatelessWidget {
       case '/insurance':
         return _createRoute(InsuranceScreen());
       case '/scan_accident_screen':
-        return _createRoute(ScanAccidentScreen());
+        // Handle the arguments for ScanAccidentScreen
+        final args = settings.arguments as Map<String, dynamic>?;
+        if (args != null && args.containsKey('scanType')) {
+          final scanType = args['scanType'] as String;
+          // Example of a simple callback to handle the result
+          void onScanComplete(Map<String, dynamic> result) {
+            print('Scan completed with result: $result');
+            // You can add more logic here, like updating a state or navigating
+          }
+
+          return _createRoute(
+            ScanAccidentScreen(
+              scanType: scanType,
+              onScanComplete: onScanComplete,
+            ),
+          );
+        }
+        // Fallback if arguments are missing
+        return _createRoute(
+          const Scaffold(
+            body: Center(
+              child: Text(
+                  'Error: Scan type not specified for ScanAccidentScreen.'),
+            ),
+          ),
+        );
       default:
         return _createRoute(
           const Scaffold(

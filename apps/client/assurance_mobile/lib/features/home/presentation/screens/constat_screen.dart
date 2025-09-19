@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'scan_accident_screen.dart';
 
 class ConstatScreen extends StatefulWidget {
   const ConstatScreen({super.key});
@@ -18,33 +19,34 @@ class _ConstatScreenState extends State<ConstatScreen>
   int currentStep = 0;
   bool isRecording = false;
   bool isProcessing = false;
+  String? selectedScanType; // 'qr', 'plate', 'damage', 'draw'
 
   final List<ConstatStep> steps = [
     ConstatStep(
-      title: "Scan Other Driver",
+      title: "Scanner l'autre conducteur",
       description:
-          "Let's start by getting the other driver's information. You can scan their QR code if they have the app, or scan their license plate.",
+          "Commençons par obtenir les informations de l'autre conducteur. Vous pouvez scanner son QR code s'il a l'application, ou scanner sa plaque d'immatriculation.",
       icon: Icons.qr_code_scanner,
       completed: false,
     ),
     ConstatStep(
-      title: "Scan Vehicle Damage",
+      title: "Scanner les dégâts du véhicule",
       description:
-          "Now, let's document the damage to both vehicles. Take photos of all damaged areas.",
+          "Maintenant, documentons les dégâts sur les deux véhicules. Prenez des photos de toutes les zones endommagées.",
       icon: Icons.camera_alt,
       completed: false,
     ),
     ConstatStep(
-      title: "Draw the Accident",
+      title: "Dessiner l'accident",
       description:
-          "Help me understand what happened by drawing the accident scene using our drag and drop tools.",
+          "Aidez-moi à comprendre ce qui s'est passé en dessinant la scène d'accident avec nos outils de glisser-déposer.",
       icon: Icons.draw,
       completed: false,
     ),
     ConstatStep(
-      title: "Review & Submit",
+      title: "Réviser et soumettre",
       description:
-          "Perfect! Let's review everything and submit your constat for processing.",
+          "Parfait ! Révisons tout et soumettons votre constat pour traitement.",
       icon: Icons.check_circle,
       completed: false,
     ),
@@ -95,6 +97,7 @@ class _ConstatScreenState extends State<ConstatScreen>
       setState(() {
         steps[currentStep].completed = true;
         currentStep++;
+        selectedScanType = null; // Reset scan type for new step
       });
       HapticFeedback.lightImpact();
     } else {
@@ -132,13 +135,13 @@ class _ConstatScreenState extends State<ConstatScreen>
             ),
             const SizedBox(width: 12),
             Text(
-              'Constat Submitted!',
+              'Constat soumis !',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
           ],
         ),
         content: Text(
-          'Your constat has been submitted successfully and is now under review. You\'ll receive updates on its status.',
+          'Votre constat a été soumis avec succès et est maintenant en cours de révision. Vous recevrez des mises à jour sur son statut.',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         actions: [
@@ -147,7 +150,7 @@ class _ConstatScreenState extends State<ConstatScreen>
               Navigator.of(context).pop();
               Navigator.of(context).pop();
             },
-            child: const Text('Done'),
+            child: const Text('Terminé'),
           ),
         ],
       ),
@@ -179,10 +182,10 @@ class _ConstatScreenState extends State<ConstatScreen>
         _navigateToScanDriver();
         break;
       case 1:
-        _navigateToScanDamage();
+        _navigateToScanScreen('damage');
         break;
       case 2:
-        _navigateToDrawAccident();
+        _navigateToScanScreen('draw');
         break;
       case 3:
         _nextStep();
@@ -212,7 +215,7 @@ class _ConstatScreenState extends State<ConstatScreen>
             ),
             const SizedBox(height: 20),
             Text(
-              'Scan Other Driver',
+              "Scanner l'autre conducteur",
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 20),
@@ -220,24 +223,24 @@ class _ConstatScreenState extends State<ConstatScreen>
               children: [
                 Expanded(
                   child: _buildActionCard(
-                    'QR Code',
-                    'Other driver has the app',
+                    'Code QR',
+                    "L'autre conducteur a l'application",
                     Icons.qr_code_scanner,
                     () {
                       Navigator.pop(context);
-                      _simulateQRScan();
+                      _navigateToScanScreen('qr');
                     },
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: _buildActionCard(
-                    'License Plate',
-                    'Scan license plate',
+                    "Plaque d'immatriculation",
+                    "Scanner la plaque d'immatriculation",
                     Icons.directions_car,
                     () {
                       Navigator.pop(context);
-                      _simulatePlateScan();
+                      _navigateToScanScreen('plate');
                     },
                   ),
                 ),
@@ -250,58 +253,42 @@ class _ConstatScreenState extends State<ConstatScreen>
     );
   }
 
-  void _navigateToScanDamage() {
-    // Navigate to ScanAccidentScreen or show camera interface
-    _simulateDamageScan();
+  void _navigateToScanScreen(String scanType) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ScanAccidentScreen(
+          scanType: scanType,
+          onScanComplete: (result) {
+            // Handle scan result
+            _handleScanResult(scanType, result);
+          },
+        ),
+      ),
+    );
   }
 
-  void _navigateToDrawAccident() {
-    // Navigate to drawing interface
-    _simulateDrawingAccident();
-  }
+  void _handleScanResult(String scanType, Map<String, dynamic> result) {
+    String message;
+    switch (scanType) {
+      case 'qr':
+        message = "Code QR scanné avec succès !";
+        break;
+      case 'plate':
+        message = "Informations de la plaque d'immatriculation extraites !";
+        break;
+      case 'damage':
+        message = "Dégâts du véhicule documentés !";
+        break;
+      case 'draw':
+        message = "Scène d'accident dessinée avec succès !";
+        break;
+      default:
+        message = "Opération terminée avec succès !";
+    }
 
-  void _simulateQRScan() {
-    setState(() => isProcessing = true);
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() => isProcessing = false);
-        _showInfoExtractedDialog("QR Code scanned successfully!");
-        _nextStep();
-      }
-    });
-  }
-
-  void _simulatePlateScan() {
-    setState(() => isProcessing = true);
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() => isProcessing = false);
-        _showInfoExtractedDialog("License plate information extracted!");
-        _nextStep();
-      }
-    });
-  }
-
-  void _simulateDamageScan() {
-    setState(() => isProcessing = true);
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() => isProcessing = false);
-        _showInfoExtractedDialog("Vehicle damage documented!");
-        _nextStep();
-      }
-    });
-  }
-
-  void _simulateDrawingAccident() {
-    setState(() => isProcessing = true);
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() => isProcessing = false);
-        _showInfoExtractedDialog("Accident scene drawn successfully!");
-        _nextStep();
-      }
-    });
+    _showInfoExtractedDialog(message);
+    _nextStep();
   }
 
   void _showInfoExtractedDialog(String message) {
@@ -383,11 +370,11 @@ class _ConstatScreenState extends State<ConstatScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Create Constat',
+                              'Créer un constat',
                               style: Theme.of(context).textTheme.headlineMedium,
                             ),
                             Text(
-                              'Step ${currentStep + 1} of ${steps.length}',
+                              'Étape ${currentStep + 1} sur ${steps.length}',
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ],
@@ -442,7 +429,7 @@ class _ConstatScreenState extends State<ConstatScreen>
                                     ),
                                     const SizedBox(height: 16),
                                     Text(
-                                      'Lumi Assistant',
+                                      'Assistant Lumi',
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleLarge,
@@ -564,13 +551,13 @@ class _ConstatScreenState extends State<ConstatScreen>
                                       ),
                                     ),
                                     const SizedBox(width: 12),
-                                    const Text('Processing...'),
+                                    const Text('Traitement en cours...'),
                                   ],
                                 )
                               : Text(
                                   currentStep < steps.length - 1
-                                      ? 'Continue'
-                                      : 'Submit Constat',
+                                      ? 'Continuer'
+                                      : 'Soumettre le constat',
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -694,7 +681,7 @@ class _ConstatScreenState extends State<ConstatScreen>
                       if (isActive) ...[
                         const SizedBox(height: 4),
                         Text(
-                          'Current step',
+                          'Étape actuelle',
                           style: Theme.of(context)
                               .textTheme
                               .bodySmall
@@ -715,7 +702,7 @@ class _ConstatScreenState extends State<ConstatScreen>
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Completed',
+                              'Terminé',
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
