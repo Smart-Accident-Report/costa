@@ -50,6 +50,8 @@ dependencies:
   flutter_launcher_icons: ^0.14.4
   flutter_lints: ^5.0.0
   deepgram_speech_to_text: ^4.1.0
+  flutter_tts: ^4.2.3
+  record: ^6.1.1
 
 dev_dependencies:
   flutter_test:

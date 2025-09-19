@@ -1,5 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:deepgram_speech_to_text/deepgram_speech_to_text.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter/material.dart';
+import 'package:record/record.dart';
 import 'scan_accident_screen.dart';
 
 class ConstatScreen extends StatefulWidget {
@@ -19,7 +22,25 @@ class _ConstatScreenState extends State<ConstatScreen>
   int currentStep = 0;
   bool isRecording = false;
   bool isProcessing = false;
-  String? selectedScanType; // 'qr', 'plate', 'damage', 'draw'
+  String? selectedScanType;
+  late Deepgram deepgram;
+  late FlutterTts flutterTts;
+  bool isListening = false;
+  bool isSpeaking = false;
+  int currentQuestionIndex = 0;
+  late final AudioRecorder _audioRecorder;
+  DeepgramLiveListener? _deepgramListener;
+
+  List<String> accidentQuestions = [
+    "Bonjour ! Je suis votre assistant Lumi. Pouvez-vous me décrire comment l'accident s'est produit ?",
+    "Où étiez-vous au moment de l'accident ? Sur quelle route ou intersection ?",
+    "À quelle heure approximativement l'accident a-t-il eu lieu ?",
+    "Quelles étaient les conditions météorologiques au moment de l'accident ?",
+    "Y a-t-il eu des blessés dans cet accident ?",
+    "Avez-vous d'autres détails importants à ajouter concernant l'accident ?",
+    "Merci pour ces informations. Votre déclaration a été enregistrée avec succès."
+  ];
+  List<String> userResponses = [];
 
   final List<ConstatStep> steps = [
     ConstatStep(
@@ -56,6 +77,8 @@ class _ConstatScreenState extends State<ConstatScreen>
   void initState() {
     super.initState();
 
+    _audioRecorder = AudioRecorder();
+
     _mascotController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
@@ -83,13 +106,146 @@ class _ConstatScreenState extends State<ConstatScreen>
     ));
 
     _timelineController.forward();
+    _initializeSpeechAndTTS();
   }
 
   @override
   void dispose() {
     _mascotController.dispose();
     _timelineController.dispose();
+    flutterTts.stop();
+    _audioRecorder.dispose();
+    _deepgramListener?.close();
     super.dispose();
+  }
+
+  void _initializeSpeechAndTTS() async {
+    // Initialize Deepgram Speech-to-Text
+    deepgram = Deepgram('YOUR_DEEPGRAM_API_KEY');
+
+    // Initialize Flutter TTS
+    flutterTts = FlutterTts();
+    await flutterTts.setLanguage('fr-FR');
+    await flutterTts.setPitch(1.0);
+    await flutterTts.setVolume(1.0);
+    await flutterTts.setSpeechRate(0.5);
+
+    // Set TTS completion callback
+    flutterTts.setCompletionHandler(() {
+      setState(() {
+        isSpeaking = false;
+      });
+      if (currentQuestionIndex < accidentQuestions.length - 1) {
+        _startListening();
+      }
+    });
+  }
+
+  Future<void> _speakText(String text) async {
+    setState(() {
+      isSpeaking = true;
+    });
+    await flutterTts.speak(text);
+  }
+
+  Future<void> _startListening() async {
+    try {
+      setState(() {
+        isListening = true;
+      });
+
+      if (await _audioRecorder.hasPermission()) {
+        final sttStreamParams = {
+          'model': 'nova-2-general',
+          'language': 'fr',
+          'smart_format': true,
+          'interim_results': false,
+        };
+
+        final micStream = await _audioRecorder.startStream(RecordConfig(
+          encoder: AudioEncoder.pcm16bits,
+          sampleRate: 16000,
+          numChannels: 1,
+        ));
+
+        _deepgramListener = deepgram.listen
+            .liveListener(micStream, queryParams: sttStreamParams);
+
+        _deepgramListener!.stream.listen((result) {
+          if (result.isFinal &&
+              result.transcript != null &&
+              result.transcript!.isNotEmpty) {
+            _handleSpeechResult(result.transcript!);
+            _deepgramListener
+                ?.close(); // Close the listener after a final result
+          }
+        });
+
+        _deepgramListener!.start();
+      } else {
+        print('Microphone permission not granted');
+        setState(() {
+          isListening = false;
+        });
+      }
+    } catch (e) {
+      print('Error during speech recognition: $e');
+      setState(() {
+        isListening = false;
+      });
+    }
+  }
+
+  void _handleSpeechResult(String transcript) {
+    userResponses.add(transcript);
+    currentQuestionIndex++;
+
+    if (currentQuestionIndex < accidentQuestions.length) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _speakText(accidentQuestions[currentQuestionIndex]);
+      });
+    } else {
+      // Interview completed
+      Navigator.of(context).pop();
+      _showInterviewCompletedDialog();
+    }
+  }
+
+  void _showInterviewCompletedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(
+              Icons.check_circle,
+              color: Theme.of(context).colorScheme.primary,
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Entretien terminé !',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+          ],
+        ),
+        content: Text(
+          'Votre déclaration vocale a été enregistrée avec succès. Ces informations complètent votre constat d\'accident.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Continuer'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _nextStep() {
@@ -158,22 +314,140 @@ class _ConstatScreenState extends State<ConstatScreen>
   }
 
   void _toggleRecording() {
-    setState(() {
-      isRecording = !isRecording;
-    });
+    // Check if all steps are completed before allowing voice interview
+    bool allStepsCompleted =
+        steps.take(steps.length - 1).every((step) => step.completed);
 
-    HapticFeedback.mediumImpact();
-
-    if (isRecording) {
-      // Start voice recording logic here
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) {
-          setState(() {
-            isRecording = false;
-          });
-        }
-      });
+    if (!allStepsCompleted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+              'Veuillez d\'abord terminer toutes les étapes avant de commencer l\'entretien vocal.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
     }
+
+    _showVoiceInterviewDialog();
+  }
+
+  // Add this new method
+  void _showVoiceInterviewDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            backgroundColor: Theme.of(context).cardColor,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                Icon(
+                  Icons.record_voice_over,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Entretien vocal',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: isListening
+                        ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+                        : isSpeaking
+                            ? Theme.of(context)
+                                .colorScheme
+                                .secondary
+                                .withOpacity(0.2)
+                            : Theme.of(context).cardColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isListening
+                          ? Theme.of(context).colorScheme.primary
+                          : isSpeaking
+                              ? Theme.of(context).colorScheme.secondary
+                              : Theme.of(context).dividerColor,
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    isListening
+                        ? Icons.mic
+                        : isSpeaking
+                            ? Icons.volume_up
+                            : Icons.support_agent,
+                    size: 40,
+                    color: isListening
+                        ? Theme.of(context).colorScheme.primary
+                        : isSpeaking
+                            ? Theme.of(context).colorScheme.secondary
+                            : Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  isListening
+                      ? 'Je vous écoute...'
+                      : isSpeaking
+                          ? 'Assistant Lumi parle...'
+                          : 'Prêt à commencer l\'entretien',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Question ${currentQuestionIndex + 1} sur ${accidentQuestions.length}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (isListening || isSpeaking)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 16),
+                    child: LinearProgressIndicator(),
+                  ),
+              ],
+            ),
+            actions: [
+              if (currentQuestionIndex == 0 && !isListening && !isSpeaking)
+                ElevatedButton(
+                  onPressed: () {
+                    _speakText(accidentQuestions[currentQuestionIndex]);
+                  },
+                  child: const Text('Commencer'),
+                ),
+              TextButton(
+                onPressed: () {
+                  flutterTts.stop();
+                  _deepgramListener?.close();
+                  setState(() {
+                    isListening = false;
+                    isSpeaking = false;
+                    currentQuestionIndex = 0;
+                    userResponses.clear();
+                  });
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Annuler'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   void _navigateToStepAction() {
