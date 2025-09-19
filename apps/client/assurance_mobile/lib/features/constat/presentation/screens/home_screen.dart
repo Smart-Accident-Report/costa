@@ -867,6 +867,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   borderRadius: BorderRadius.circular(16),
                                   onTap: () {
                                     HapticFeedback.lightImpact();
+                                    Navigator.of(context)
+                                        .pushNamed('/depanage');
                                   },
                                   child: Padding(
                                     padding: const EdgeInsets.all(20),

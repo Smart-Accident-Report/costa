@@ -15,6 +15,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/theme/theme.dart';
 import 'di/injection_container.dart' as di;
 import 'features/constat/presentation/screens/conducteurs_screen.dart';
+import 'features/depanage/presentation/screen/depanage_screen.dart';
 import 'features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'features/splash/presentation/bloc/splash_bloc.dart';
@@ -93,6 +94,8 @@ class MyApp extends StatelessWidget {
         return _createRoute(InsuranceScreen());
       case '/mes_constats':
         return _createRoute(MesConstatsScreen());
+      case '/depanage':
+        return _createRoute(const DepanageScreen());
       case '/scan_accident_screen':
         final args = settings.arguments as Map<String, dynamic>?;
         if (args != null && args.containsKey('scanType')) {
