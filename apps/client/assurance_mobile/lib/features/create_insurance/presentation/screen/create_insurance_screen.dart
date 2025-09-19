@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'camera_scan_screen.dart';
+import 'package:local_auth/local_auth.dart';
 
 class CreateInsuranceScreen extends StatefulWidget {
   const CreateInsuranceScreen({super.key});
@@ -56,6 +57,31 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
   late final TextEditingController _anneeController;
   late final TextEditingController _valeurVenaleController;
   late final TextEditingController _wilayaController;
+
+  final LocalAuthentication _localAuth = LocalAuthentication();
+
+  Future<bool> _authenticateWithFingerprint() async {
+    try {
+      final bool isAvailable = await _localAuth.canCheckBiometrics;
+      if (!isAvailable) {
+        return false;
+      }
+
+      final bool didAuthenticate = await _localAuth.authenticate(
+        localizedReason:
+            'Veuillez authentifier votre identité pour finaliser votre demande d\'assurance',
+        options: const AuthenticationOptions(
+          biometricOnly: true,
+          stickyAuth: true,
+        ),
+      );
+
+      return didAuthenticate;
+    } catch (e) {
+      return false;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -185,12 +211,178 @@ class _CreateInsuranceScreenState extends State<CreateInsuranceScreen>
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
+                    onPressed: () async {
+                      Navigator.of(context).pop(); // Close current dialog
+
+                      // Authenticate with fingerprint
+                      final authenticated =
+                          await _authenticateWithFingerprint();
+
+                      if (authenticated) {
+                        // Show under review dialog
+                        _showUnderReviewDialog();
+                      } else {
+                        // Show authentication failed dialog
+                        _showAuthFailedDialog();
+                      }
+                    },
+                    child: const Text('Terminer'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showUnderReviewDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Theme.of(context).cardColor,
+                  Theme.of(context).cardColor.withOpacity(0.8),
+                ],
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.schedule,
+                    size: 32,
+                    color: Colors.orange,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Demande en cours d\'examen',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Votre demande d\'assurance est maintenant en cours d\'examen. Nous vous contacterons sous 24-48h avec une réponse.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
                     onPressed: () {
                       Navigator.of(context).pop();
                       Navigator.of(context).pop();
                     },
-                    child: const Text('Terminé'),
+                    child: const Text('Compris'),
                   ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAuthFailedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Theme.of(context).cardColor,
+                  Theme.of(context).cardColor.withOpacity(0.8),
+                ],
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.error_outline,
+                    size: 32,
+                    color: Colors.red,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Authentification échouée',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'L\'authentification biométrique a échoué. Veuillez réessayer pour finaliser votre demande.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _showSuccessDialog(); // Go back to previous dialog
+                        },
+                        child: const Text('Réessayer'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Annuler'),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
