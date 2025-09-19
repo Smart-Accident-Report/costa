@@ -65,6 +65,13 @@ class _ConstatScreenState extends State<ConstatScreen>
       completed: false,
     ),
     ConstatStep(
+      title: "Entretien vocal",
+      description:
+          "Répondez aux questions de l'assistant Lumi pour compléter votre déclaration d'accident.",
+      icon: Icons.record_voice_over,
+      completed: false,
+    ),
+    ConstatStep(
       title: "Réviser et soumettre",
       description:
           "Parfait ! Révisons tout et soumettons votre constat pour traitement.",
@@ -135,9 +142,12 @@ class _ConstatScreenState extends State<ConstatScreen>
       setState(() {
         isSpeaking = false;
       });
-      if (currentQuestionIndex < accidentQuestions.length - 1) {
-        _startListening();
-      }
+      // Add a small delay before starting to listen
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (currentQuestionIndex < accidentQuestions.length - 1) {
+          _startListening();
+        }
+      });
     });
   }
 
@@ -155,33 +165,65 @@ class _ConstatScreenState extends State<ConstatScreen>
       });
 
       if (await _audioRecorder.hasPermission()) {
+        // Close any existing listener first
+        await _deepgramListener?.close();
+
         final sttStreamParams = {
           'model': 'nova-2-general',
           'language': 'fr',
           'smart_format': true,
           'interim_results': false,
+          'encoding': 'linear16',
+          'sample_rate': 16000,
+          'channels': 1,
         };
 
-        final micStream = await _audioRecorder.startStream(RecordConfig(
-          encoder: AudioEncoder.pcm16bits,
-          sampleRate: 16000,
-          numChannels: 1,
-        ));
+        try {
+          final micStream = await _audioRecorder.startStream(RecordConfig(
+            encoder: AudioEncoder.pcm16bits,
+            sampleRate: 16000,
+            numChannels: 1,
+          ));
 
-        _deepgramListener = deepgram.listen
-            .liveListener(micStream, queryParams: sttStreamParams);
+          _deepgramListener = deepgram.listen
+              .liveListener(micStream, queryParams: sttStreamParams);
 
-        _deepgramListener!.stream.listen((result) {
-          if (result.isFinal &&
-              result.transcript != null &&
-              result.transcript!.isNotEmpty) {
-            _handleSpeechResult(result.transcript!);
-            _deepgramListener
-                ?.close(); // Close the listener after a final result
-          }
-        });
+          _deepgramListener!.stream.listen(
+            (result) {
+              if (result.isFinal &&
+                  result.transcript != null &&
+                  result.transcript!.isNotEmpty &&
+                  result.transcript!.trim().length > 2) {
+                _handleSpeechResult(result.transcript!);
+              }
+            },
+            onError: (error) {
+              print('Deepgram error: $error');
+              setState(() {
+                isListening = false;
+              });
+            },
+            onDone: () {
+              setState(() {
+                isListening = false;
+              });
+            },
+          );
 
-        _deepgramListener!.start();
+          await _deepgramListener!.start();
+
+          // Auto-stop listening after 30 seconds
+          Future.delayed(const Duration(seconds: 30), () {
+            if (isListening) {
+              _stopListening();
+            }
+          });
+        } catch (e) {
+          print('Error creating Deepgram listener: $e');
+          setState(() {
+            isListening = false;
+          });
+        }
       } else {
         print('Microphone permission not granted');
         setState(() {
@@ -189,23 +231,43 @@ class _ConstatScreenState extends State<ConstatScreen>
         });
       }
     } catch (e) {
-      print('Error during speech recognition: $e');
+      print('Error during speech recognition setup: $e');
       setState(() {
         isListening = false;
       });
     }
   }
 
+  Future<void> _stopListening() async {
+    try {
+      await _audioRecorder.stop();
+      await _deepgramListener?.close();
+      setState(() {
+        isListening = false;
+      });
+    } catch (e) {
+      print('Error stopping listening: $e');
+    }
+  }
+
   void _handleSpeechResult(String transcript) {
+    // Stop listening immediately
+    _stopListening();
+
     userResponses.add(transcript);
     currentQuestionIndex++;
 
     if (currentQuestionIndex < accidentQuestions.length) {
-      Future.delayed(const Duration(milliseconds: 500), () {
-        _speakText(accidentQuestions[currentQuestionIndex]);
+      Future.delayed(const Duration(milliseconds: 1000), () {
+        if (mounted) {
+          _speakText(accidentQuestions[currentQuestionIndex]);
+        }
       });
     } else {
       // Interview completed
+      setState(() {
+        steps[currentStep].completed = true;
+      });
       Navigator.of(context).pop();
       _showInterviewCompletedDialog();
     }
@@ -313,29 +375,6 @@ class _ConstatScreenState extends State<ConstatScreen>
     );
   }
 
-  void _toggleRecording() {
-    // Check if all steps are completed before allowing voice interview
-    bool allStepsCompleted =
-        steps.take(steps.length - 1).every((step) => step.completed);
-
-    if (!allStepsCompleted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(
-              'Veuillez d\'abord terminer toutes les étapes avant de commencer l\'entretien vocal.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-      return;
-    }
-
-    _showVoiceInterviewDialog();
-  }
-
-  // Add this new method
   void _showVoiceInterviewDialog() {
     showDialog(
       context: context,
@@ -462,6 +501,9 @@ class _ConstatScreenState extends State<ConstatScreen>
         _navigateToScanScreen('draw');
         break;
       case 3:
+        _showVoiceInterviewDialog();
+        break;
+      case 4:
         _nextStep();
         break;
     }
@@ -763,83 +805,48 @@ class _ConstatScreenState extends State<ConstatScreen>
                   ),
                 ),
                 child: SafeArea(
-                  child: Row(
-                    children: [
-                      // Voice Recording Button
-                      GestureDetector(
-                        onTap: _toggleRecording,
-                        child: Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: isRecording
-                                ? Theme.of(context).colorScheme.error
-                                : Theme.of(context).cardColor,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isRecording
-                                  ? Theme.of(context).colorScheme.error
-                                  : Theme.of(context).dividerColor,
-                              width: 2,
-                            ),
-                          ),
-                          child: Icon(
-                            isRecording ? Icons.stop : Icons.mic,
-                            color: isRecording
-                                ? Colors.white
-                                : Theme.of(context).colorScheme.primary,
-                            size: 28,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(width: 16),
+                  child:
 
                       // Main Action Button
                       Expanded(
-                        child: ElevatedButton(
-                          onPressed:
-                              isProcessing ? null : _navigateToStepAction,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primary,
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
-                          child: isProcessing
-                              ? Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                          Colors.black,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const Text('Traitement en cours...'),
-                                  ],
-                                )
-                              : Text(
-                                  currentStep < steps.length - 1
-                                      ? 'Continuer'
-                                      : 'Soumettre le constat',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                    child: ElevatedButton(
+                      onPressed: isProcessing ? null : _navigateToStepAction,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
                         ),
                       ),
-                    ],
+                      child: isProcessing
+                          ? Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.black,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text('Traitement en cours...'),
+                              ],
+                            )
+                          : Text(
+                              currentStep < steps.length - 1
+                                  ? 'Continuer'
+                                  : 'Soumettre le constat',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
                   ),
                 ),
               ),
