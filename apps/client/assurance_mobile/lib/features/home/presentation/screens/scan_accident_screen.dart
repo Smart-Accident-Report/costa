@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:camera/camera.dart';
 
 class ScanAccidentScreen extends StatefulWidget {
   final String scanType; // 'qr', 'plate', 'damage', 'draw'
@@ -22,6 +23,11 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
   late Animation<double> _scanAnimation;
   late Animation<double> _pulseAnimation;
 
+  // Camera related
+  CameraController? _cameraController;
+  List<CameraDescription>? cameras;
+  bool _isCameraInitialized = false;
+
   bool isScanning = false;
   bool isProcessing = false;
   String statusMessage = '';
@@ -29,6 +35,16 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
   List<Map<String, dynamic>> drawings = [];
   List<Offset> currentDrawing = [];
   List<List<Offset>> allDrawings = [];
+
+  // Damage scan comments
+  final List<String> damageComments = [
+    "Parfait ! Maintenant zoomez sur les détails",
+    "Excellent angle ! Essayez depuis le côté",
+    "Très bien ! Photographiez depuis le haut",
+    "Belle prise ! Capturez l'autre côté du dégât",
+    "Parfait ! Une vue d'ensemble maintenant",
+    "Dernière photo ! Vue générale du véhicule"
+  ];
 
   @override
   void initState() {
@@ -61,6 +77,32 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
     ));
 
     _initializeScanType();
+    _initializeCamera();
+  }
+
+  Future<void> _initializeCamera() async {
+    // Only initialize camera for non-drawing scan types
+    if (widget.scanType != 'draw') {
+      cameras = await availableCameras();
+      if (cameras != null && cameras!.isNotEmpty) {
+        _cameraController = CameraController(
+          cameras![0],
+          ResolutionPreset.high,
+          enableAudio: false,
+        );
+
+        try {
+          await _cameraController!.initialize();
+          if (mounted) {
+            setState(() {
+              _isCameraInitialized = true;
+            });
+          }
+        } catch (e) {
+          print('Error initializing camera: $e');
+        }
+      }
+    }
   }
 
   void _initializeScanType() {
@@ -86,6 +128,7 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
   void dispose() {
     _scanController.dispose();
     _pulseController.dispose();
+    _cameraController?.dispose();
     super.dispose();
   }
 
@@ -160,8 +203,8 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
 
     _scanController.stop();
 
-    // Simulate processing
-    Future.delayed(const Duration(seconds: 2), () {
+    // Longer processing time (5+ seconds)
+    Future.delayed(const Duration(seconds: 6), () {
       if (mounted) {
         _completeScan();
       }
@@ -199,7 +242,11 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
           'type': 'damage',
           'data': {
             'images': capturedImages,
-            'damageAreas': ['Pare-chocs avant', 'Phare gauche', 'Aile avant gauche'],
+            'damageAreas': [
+              'Pare-chocs avant',
+              'Phare gauche',
+              'Aile avant gauche'
+            ],
             'severity': 'Modéré',
           },
         };
@@ -221,8 +268,6 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
       statusMessage = 'Terminé avec succès !';
     });
 
-    
-
     // Complete the scan after a short delay
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
@@ -232,22 +277,79 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
     });
   }
 
-  void _captureImage() {
-    setState(() {
-      capturedImages.add('image_${capturedImages.length + 1}.jpg');
-    });
-    HapticFeedback.lightImpact();
-    
-    // Show success feedback
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Image ${capturedImages.length} capturée'),
-        duration: const Duration(seconds: 1),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+  Future<void> _captureImage() async {
+    if (_cameraController != null && _cameraController!.value.isInitialized) {
+      try {
+        final XFile image = await _cameraController!.takePicture();
+        setState(() {
+          capturedImages.add(image.path);
+        });
+        HapticFeedback.lightImpact();
+
+        // Show progressive comment based on capture count
+        String comment = '';
+        if (capturedImages.length <= damageComments.length) {
+          comment = damageComments[capturedImages.length - 1];
+        } else {
+          comment = 'Image ${capturedImages.length} capturée';
+        }
+
+        // Show success feedback with progressive comments
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(comment),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+
+        // Auto-complete after 6 images
+        if (capturedImages.length >= 6) {
+          Future.delayed(const Duration(seconds: 1), () {
+            if (mounted) {
+              _completeScan();
+            }
+          });
+        }
+      } catch (e) {
+        print('Error taking picture: $e');
+      }
+    } else {
+      // Fallback for when camera is not available
+      setState(() {
+        capturedImages.add('image_${capturedImages.length + 1}.jpg');
+      });
+      HapticFeedback.lightImpact();
+
+      String comment = '';
+      if (capturedImages.length <= damageComments.length) {
+        comment = damageComments[capturedImages.length - 1];
+      } else {
+        comment = 'Image ${capturedImages.length} capturée';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(comment),
+          duration: const Duration(seconds: 2),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+
+      if (capturedImages.length >= 6) {
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) {
+            _completeScan();
+          }
+        });
+      }
+    }
   }
 
   void _clearDrawing() {
@@ -271,7 +373,8 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Veuillez dessiner la scène d\'accident avant de continuer'),
+          content:
+              Text('Veuillez dessiner la scène d\'accident avant de continuer'),
         ),
       );
     }
@@ -331,7 +434,7 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
                   color: Colors.grey[900],
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isScanning 
+                    color: isScanning
                         ? Theme.of(context).colorScheme.primary
                         : Colors.grey[600]!,
                     width: 2,
@@ -350,7 +453,7 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
               child: Text(
                 statusMessage,
                 style: TextStyle(
-                  color: isProcessing 
+                  color: isProcessing
                       ? Theme.of(context).colorScheme.primary
                       : Colors.white70,
                   fontSize: 16,
@@ -386,22 +489,36 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
     }
   }
 
+  Widget _buildCameraView() {
+    if (_cameraController != null && _isCameraInitialized) {
+      return CameraPreview(_cameraController!);
+    } else {
+      return Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: Colors.black,
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: Colors.white),
+              SizedBox(height: 16),
+              Text(
+                'Initialisation de la caméra...',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
   Widget _buildQRScanView() {
     return Stack(
       children: [
-        // Camera view placeholder
-        Container(
-          width: double.infinity,
-          height: double.infinity,
-          color: Colors.black,
-          child: const Center(
-            child: Icon(
-              Icons.camera_alt,
-              size: 80,
-              color: Colors.white30,
-            ),
-          ),
-        ),
+        // Camera view
+        _buildCameraView(),
 
         // QR Code overlay
         Center(
@@ -429,22 +546,30 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
                       height: 20,
                       decoration: BoxDecoration(
                         border: Border(
-                          top: index < 2 ? BorderSide(
-                            color: Theme.of(context).colorScheme.primary,
-                            width: 4,
-                          ) : BorderSide.none,
-                          bottom: index >= 2 ? BorderSide(
-                            color: Theme.of(context).colorScheme.primary,
-                            width: 4,
-                          ) : BorderSide.none,
-                          left: index % 2 == 0 ? BorderSide(
-                            color: Theme.of(context).colorScheme.primary,
-                            width: 4,
-                          ) : BorderSide.none,
-                          right: index % 2 == 1 ? BorderSide(
-                            color: Theme.of(context).colorScheme.primary,
-                            width: 4,
-                          ) : BorderSide.none,
+                          top: index < 2
+                              ? BorderSide(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  width: 4,
+                                )
+                              : BorderSide.none,
+                          bottom: index >= 2
+                              ? BorderSide(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  width: 4,
+                                )
+                              : BorderSide.none,
+                          left: index % 2 == 0
+                              ? BorderSide(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  width: 4,
+                                )
+                              : BorderSide.none,
+                          right: index % 2 == 1
+                              ? BorderSide(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  width: 4,
+                                )
+                              : BorderSide.none,
                         ),
                       ),
                     ),
@@ -461,7 +586,9 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
             animation: _scanAnimation,
             builder: (context, child) {
               return Positioned(
-                top: 50 + (MediaQuery.of(context).size.height * 0.4 - 100) * _scanAnimation.value,
+                top: 50 +
+                    (MediaQuery.of(context).size.height * 0.4 - 100) *
+                        _scanAnimation.value,
                 left: 0,
                 right: 0,
                 child: Container(
@@ -478,19 +605,8 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
   Widget _buildPlateScanView() {
     return Stack(
       children: [
-        // Camera view placeholder
-        Container(
-          width: double.infinity,
-          height: double.infinity,
-          color: Colors.black,
-          child: const Center(
-            child: Icon(
-              Icons.camera_alt,
-              size: 80,
-              color: Colors.white30,
-            ),
-          ),
-        ),
+        // Camera view
+        _buildCameraView(),
 
         // License plate overlay
         Center(
@@ -523,8 +639,8 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
             animation: _scanAnimation,
             builder: (context, child) {
               return Positioned(
-                top: MediaQuery.of(context).size.height * 0.3 + 
-                     (100 * _scanAnimation.value),
+                top: MediaQuery.of(context).size.height * 0.3 +
+                    (100 * _scanAnimation.value),
                 left: 0,
                 right: 0,
                 child: Container(
@@ -541,19 +657,8 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
   Widget _buildDamageScanView() {
     return Stack(
       children: [
-        // Camera view placeholder
-        Container(
-          width: double.infinity,
-          height: double.infinity,
-          color: Colors.black,
-          child: const Center(
-            child: Icon(
-              Icons.camera_alt,
-              size: 80,
-              color: Colors.white30,
-            ),
-          ),
-        ),
+        // Camera view
+        _buildCameraView(),
 
         // Captured images overlay
         if (capturedImages.isNotEmpty)
@@ -567,7 +672,7 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                '${capturedImages.length} image${capturedImages.length > 1 ? 's' : ''} capturée${capturedImages.length > 1 ? 's' : ''}',
+                '${capturedImages.length}/6 images capturées',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -576,28 +681,54 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
             ),
           ),
 
-        // Camera focus indicator
-        AnimatedBuilder(
-          animation: _pulseAnimation,
-          builder: (context, child) {
-            return Center(
-              child: Transform.scale(
-                scale: _pulseAnimation.value,
-                child: Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Colors.white,
-                      width: 2,
-                    ),
-                    shape: BoxShape.circle,
+        // Progress indicator
+        if (capturedImages.isNotEmpty)
+          Positioned(
+            top: 16,
+            right: 16,
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  '${capturedImages.length}/6',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
-            );
-          },
-        ),
+            ),
+          ),
+
+        // Camera focus indicator
+        if (!isScanning)
+          AnimatedBuilder(
+            animation: _pulseAnimation,
+            builder: (context, child) {
+              return Center(
+                child: Transform.scale(
+                  scale: _pulseAnimation.value,
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Colors.white,
+                        width: 2,
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
       ],
     );
   }
@@ -666,18 +797,7 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
   }
 
   Widget _buildDefaultScanView() {
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: Colors.black,
-      child: const Center(
-        child: Icon(
-          Icons.camera_alt,
-          size: 80,
-          color: Colors.white30,
-        ),
-      ),
-    );
+    return _buildCameraView();
   }
 
   Widget _buildActionButtons() {
@@ -738,20 +858,24 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
               return Transform.scale(
                 scale: _pulseAnimation.value,
                 child: GestureDetector(
-                  onTap: _captureImage,
+                  onTap: capturedImages.length >= 6 ? null : _captureImage,
                   child: Container(
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
+                      color: capturedImages.length >= 6
+                          ? Colors.grey
+                          : Theme.of(context).colorScheme.primary,
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: Colors.white,
                         width: 4,
                       ),
                     ),
-                    child: const Icon(
-                      Icons.camera_alt,
+                    child: Icon(
+                      capturedImages.length >= 6
+                          ? Icons.check
+                          : Icons.camera_alt,
                       size: 32,
                       color: Colors.black,
                     ),
@@ -761,32 +885,22 @@ class _ScanAccidentScreenState extends State<ScanAccidentScreen>
             },
           ),
           const SizedBox(height: 16),
-          if (capturedImages.isNotEmpty)
-            ElevatedButton(
-              onPressed: isProcessing ? null : _completeScan,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 12,
-                ),
+          if (capturedImages.isNotEmpty && capturedImages.length < 6)
+            Text(
+              'Continue de photographier (${capturedImages.length}/6)',
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
               ),
-              child: isProcessing
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                      ),
-                    )
-                  : const Text(
-                      'Terminer la capture',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+            ),
+          if (capturedImages.length >= 6)
+            const Text(
+              'Toutes les photos sont prises !',
+              style: TextStyle(
+                color: Colors.green,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
             ),
         ],
       );
