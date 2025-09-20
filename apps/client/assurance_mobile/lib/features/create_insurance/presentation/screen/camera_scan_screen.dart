@@ -191,12 +191,12 @@ class _CameraScanScreenState extends State<CameraScanScreen>
   Map<String, dynamic> _generateMockData() {
     if (widget.documentType == 'carte_grise') {
       return {
-        'marque': 'Peugeot',
-        'modele': '208',
+        'marque': 'Volks wagen',
+        'modele': 'serie cinque',
         'annee': '2020',
         'wilaya': 'Alger',
         'num_chassis': 'VF3XXXXXXXXXXXXXXX',
-        'energie': 'Essence',
+        'energie': 'Go',
         'type_matricule': 'permanent 11 digits',
         'puissance_moteur': '7-10cv',
         'nombre_places': '5',
@@ -204,9 +204,9 @@ class _CameraScanScreenState extends State<CameraScanScreen>
       };
     } else if (widget.documentType == 'permis_conduire') {
       return {
-        'nom': 'Benali',
-        'prenom': 'Ahmed',
-        'date_naissance': '15/03/1990',
+        'nom': 'Mahiddine',
+        'prenom': 'Lyes',
+        'date_naissance': '31/10/1975',
         'num_permis': 'DZ123456789',
         'date_permis': '20/05/2015',
         'type_permis': 'B',
