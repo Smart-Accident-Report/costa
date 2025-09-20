@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:deepgram_speech_to_text/deepgram_speech_to_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -32,6 +34,13 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
   bool hasStarted = false;
   String currentTranscript = "";
   String interimTranscript = "";
+
+  // Add silence detection
+  Timer? _silenceTimer;
+  bool _hasSpokenDuringSession = false;
+  String _lastFinalTranscript = "";
+  static const int _silenceThresholdSeconds =
+      3; // Wait 3 seconds after speech stops
 
   // Animation controllers for visual feedback
   late AnimationController _pulseController;
@@ -96,28 +105,22 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
     _waveController.dispose();
     _audioRecorder.dispose();
     _deepgramListener?.close();
+    _silenceTimer?.cancel();
     widget.flutterTts.stop();
     super.dispose();
   }
 
   Future<void> _speakText(String text) async {
     if (!mounted) return;
-
     setState(() {
       isSpeaking = true;
       isListening = false;
-      currentTranscript = "";
-      interimTranscript = "";
     });
-
-    _waveController.repeat();
 
     try {
       await widget.flutterTts.speak(text);
-      print('Started speaking: $text');
     } catch (e) {
       print('TTS failed to speak: $e');
-      // If TTS fails, go directly to listening
       if (mounted) {
         _startListening();
       }
@@ -125,8 +128,6 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
   }
 
   Future<void> _startListening() async {
-    if (!mounted) return;
-
     try {
       if (!await _audioRecorder.hasPermission()) {
         print('Microphone permission not granted.');
@@ -139,10 +140,12 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
         isSpeaking = false;
         currentTranscript = "";
         interimTranscript = "";
+        _hasSpokenDuringSession = false;
+        _lastFinalTranscript = "";
       });
 
-      _waveController.stop();
-      _pulseController.repeat(reverse: true);
+      // Cancel any existing silence timer
+      _silenceTimer?.cancel();
 
       // Close any existing listener first
       await _deepgramListener?.close();
@@ -151,14 +154,16 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
         'model': 'nova-2-general',
         'language': 'fr',
         'smart_format': true,
-        'interim_results': true, // Enable interim results for real-time display
+        'interim_results': true,
         'encoding': 'linear16',
         'sample_rate': 16000,
         'channels': 1,
+        'endpointing': 300, // Wait 300ms before considering speech ended
+        'utterance_end_ms': 3000, // Wait 3 seconds before ending utterance
       };
 
       try {
-        final micStream = await _audioRecorder.startStream(RecordConfig(
+        final micStream = await _audioRecorder.startStream(const RecordConfig(
           encoder: AudioEncoder.pcm16bits,
           sampleRate: 16000,
           numChannels: 1,
@@ -169,25 +174,8 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
 
         _deepgramListener!.stream.listen(
           (result) {
-            print(
-                'Deepgram result: ${result.transcript}, isFinal: ${result.isFinal}');
-
-            if (result.transcript != null &&
-                result.transcript!.trim().isNotEmpty) {
-              if (mounted) {
-                setState(() {
-                  if (result.isFinal) {
-                    currentTranscript = result.transcript!.trim();
-                    interimTranscript = "";
-                  } else {
-                    interimTranscript = result.transcript!.trim();
-                  }
-                });
-              }
-
-              if (result.isFinal) {
-                _handleSpeechResult(result.transcript!.trim());
-              }
+            if (mounted) {
+              _handleTranscriptUpdate(result);
             }
           },
           onError: (error) {
@@ -203,13 +191,8 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
         await _deepgramListener!.start();
         print('Deepgram listener started.');
 
-        // Auto-stop listening after 30 seconds
-        Future.delayed(const Duration(seconds: 30), () {
-          if (mounted && isListening) {
-            print('Auto-stopping listening after 30 seconds');
-            _stopAndResetListening();
-          }
-        });
+        // Start pulse animation when listening
+        _pulseController.repeat(reverse: true);
       } catch (e) {
         print('Error creating Deepgram listener: $e');
         _stopAndResetListening();
@@ -220,32 +203,75 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
     }
   }
 
-  void _handleSpeechResult(String transcript) async {
-    if (!mounted) return;
+  void _handleTranscriptUpdate(result) {
+    setState(() {
+      if (result.isFinal) {
+        // Update the final transcript
+        String newFinalText = result.transcript?.trim() ?? "";
+        if (newFinalText.isNotEmpty) {
+          _hasSpokenDuringSession = true;
+          currentTranscript = (currentTranscript + " " + newFinalText).trim();
+          _lastFinalTranscript = currentTranscript;
+          interimTranscript = "";
 
-    print('Processing transcript: $transcript');
+          // Start silence timer - wait for user to finish speaking
+          _startSilenceTimer();
+          print('Final transcript updated: $currentTranscript');
+        }
+      } else {
+        // Update interim transcript (real-time)
+        String newInterimText = result.transcript?.trim() ?? "";
+        if (newInterimText.isNotEmpty) {
+          _hasSpokenDuringSession = true;
+          interimTranscript = newInterimText;
+
+          // Cancel silence timer while user is still speaking
+          _silenceTimer?.cancel();
+          print('Interim transcript: $interimTranscript');
+        }
+      }
+    });
+  }
+
+  void _startSilenceTimer() {
+    _silenceTimer?.cancel();
+    _silenceTimer = Timer(Duration(seconds: _silenceThresholdSeconds), () {
+      if (mounted && isListening && _hasSpokenDuringSession) {
+        print('Silence detected, processing response: $_lastFinalTranscript');
+        _handleSpeechResult(_lastFinalTranscript);
+      }
+    });
+  }
+
+  void _handleSpeechResult(String transcript) async {
+    if (!mounted || transcript.trim().isEmpty) return;
+
+    print('Processing final transcript: $transcript');
     await _stopListening();
 
     userResponses.add(transcript);
-    currentQuestionIndex++;
 
-    if (currentQuestionIndex < widget.accidentQuestions.length) {
-      // Move to next question
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) {
-        _speakText(widget.accidentQuestions[currentQuestionIndex]);
-      }
-    } else {
-      // Interview completed
+    if (currentQuestionIndex == widget.accidentQuestions.length - 2) {
+      _speakText(widget.accidentQuestions[currentQuestionIndex + 1]);
+
+      await Future.delayed(const Duration(seconds: 3));
       if (mounted) {
         widget.onInterviewComplete(userResponses);
         Navigator.of(context).pop();
+      }
+    } else {
+      currentQuestionIndex++;
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) {
+        _speakText(widget.accidentQuestions[currentQuestionIndex]);
       }
     }
   }
 
   Future<void> _stopListening() async {
     _pulseController.stop();
+    _silenceTimer?.cancel();
+
     try {
       if (isListening) {
         await _audioRecorder.stop();
@@ -257,17 +283,27 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
     } catch (e) {
       print('Error stopping listening: $e');
     }
+    if (mounted) {
+      setState(() {
+        isListening = false;
+        interimTranscript = "";
+      });
+    }
   }
 
   void _stopAndResetListening() {
     _pulseController.stop();
     _waveController.stop();
+    _silenceTimer?.cancel();
+
     if (mounted) {
       setState(() {
         isListening = false;
         isSpeaking = false;
         currentTranscript = "";
         interimTranscript = "";
+        _hasSpokenDuringSession = false;
+        _lastFinalTranscript = "";
       });
     }
   }
@@ -300,10 +336,19 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
   }
 
   void _skipCurrentQuestion() {
+    _silenceTimer?.cancel();
     if (currentQuestionIndex < widget.accidentQuestions.length - 1) {
       userResponses.add(""); // Add empty response
       currentQuestionIndex++;
       _speakText(widget.accidentQuestions[currentQuestionIndex]);
+    }
+  }
+
+  // Add manual finish button for current response
+  void _finishCurrentResponse() {
+    if (_hasSpokenDuringSession && _lastFinalTranscript.isNotEmpty) {
+      _silenceTimer?.cancel();
+      _handleSpeechResult(_lastFinalTranscript);
     }
   }
 
@@ -396,7 +441,7 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
                           if (isSpeaking) ...[
                             const SizedBox(width: 8),
                             AnimatedBuilder(
-                              animation: _waveAnimation,
+                              animation: _waveController,
                               builder: (context, child) {
                                 return Icon(
                                   Icons.volume_up,
@@ -483,7 +528,9 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
                     // Status text
                     Text(
                       isListening
-                          ? 'Je vous écoute...'
+                          ? _hasSpokenDuringSession
+                              ? 'Continuez à parler... (arrêt automatique dans ${_silenceThresholdSeconds}s de silence)'
+                              : 'Je vous écoute...'
                           : isSpeaking
                               ? 'Assistant Lumi parle...'
                               : hasStarted
@@ -658,21 +705,26 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
+                    if (isListening && _hasSpokenDuringSession)
+                      ElevatedButton(
+                        onPressed: _finishCurrentResponse,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text('Terminer ma réponse'),
+                      ),
                     if (isListening &&
                         currentQuestionIndex <
                             widget.accidentQuestions.length - 1)
                       TextButton(
                         onPressed: _skipCurrentQuestion,
-                        child: const Text('Passer cette question'),
+                        child: const Text(
+                          'Passer cette question',
+                          style: TextStyle(fontSize: 11),
+                        ),
                       ),
-                    TextButton(
-                      onPressed: () async {
-                        await widget.flutterTts.stop();
-                        await _stopListening();
-                        Navigator.of(context).pop();
-                      },
-                      child: const Text('Annuler'),
-                    ),
                   ],
                 ),
             ],
