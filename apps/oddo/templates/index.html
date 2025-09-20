@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oddo Database Manager</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            padding: 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h3 {
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .query-box {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+        .query-box:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: opacity 0.3s;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        .error {
+            background: #ffe6e6;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+        .success {
+            background: #e6f7e6;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            border-bottom: 3px solid transparent;
+            margin: 0;
+            border-radius: 0;
+        }
+        .tab.active {
+            border-bottom-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗄️ Oddo Database Manager</h1>
+            <p>Connect, Query, and Manage Your Database</p>
+        </div>
+        
+        <div class="content">
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('query')">SQL Query</button>
+                <button class="tab" onclick="switchTab('tables')">Tables</button>
+                <button class="tab" onclick="switchTab('health')">Health Check</button>
+            </div>
+
+            <!-- SQL Query Tab -->
+            <div id="query-tab" class="tab-content active">
+                <div class="section">
+                    <h3>Execute SQL Query</h3>
+                    <textarea id="sqlQuery" class="query-box" placeholder="Enter your SQL query here...&#10;Example: SELECT * FROM users LIMIT 10;"></textarea>
+                    <br>
+                    <button onclick="executeQuery()" id="executeBtn">Execute Query</button>
+                    <button onclick="clearQuery()">Clear</button>
+                </div>
+                <div id="queryResults"></div>
+            </div>
+
+            <!-- Tables Tab -->
+            <div id="tables-tab" class="tab-content">
+                <div class="section">
+                    <h3>Database Tables</h3>
+                    <button onclick="loadTables()">Refresh Tables</button>
+                    <div id="tablesResults"></div>
+                </div>
+            </div>
+
+            <!-- Health Check Tab -->
+            <div id="health-tab" class="tab-content">
+                <div class="section">
+                    <h3>System Health</h3>
+                    <button onclick="checkHealth()">Check Health</button>
+                    <div id="healthResults"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Add active class to selected tab
+            event.target.classList.add('active');
+        }
+
+        async function executeQuery() {
+            const query = document.getElementById('sqlQuery').value.trim();
+            const executeBtn = document.getElementById('executeBtn');
+            const resultsDiv = document.getElementById('queryResults');
+            
+            if (!query) {
+                showError(resultsDiv, 'Please enter a SQL query');
+                return;
+            }
+            
+            executeBtn.disabled = true;
+            executeBtn.textContent = 'Executing...';
+            resultsDiv.innerHTML = '<div class="loading">Executing query...</div>';
+            
+            try {
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showSuccess(resultsDiv, data);
+                } else {
+                    showError(resultsDiv, data.error || data.message || 'Unknown error');
+                }
+            } catch (error) {
+                showError(resultsDiv, 'Network error: ' + error.message);
+            } finally {
+                executeBtn.disabled = false;
+                executeBtn.textContent = 'Execute Query';
+            }
+        }
+
+        async function loadTables() {
+            const resultsDiv = document.getElementById('tablesResults');
+            resultsDiv.innerHTML = '<div class="loading">Loading tables...</div>';
+            
+            try {
+                const response = await fetch('/tables');
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showTablesResult(resultsDiv, data);
+                } else {
+                    showError(resultsDiv, data.error || data.message || 'Unknown error');
+                }
+            } catch (error) {
+                showError(resultsDiv, 'Network error: ' + error.message);
+            }
+        }
+
+        async function checkHealth() {
+            const resultsDiv = document.getElementById('healthResults');
+            resultsDiv.innerHTML = '<div class="loading">Checking health...</div>';
+            
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showHealthResult(resultsDiv, data);
+                } else {
+                    showError(resultsDiv, data.error || data.message || 'Health check failed');
+                }
+            } catch (error) {
+                showError(resultsDiv, 'Network error: ' + error.message);
+            }
+        }
+
+        function clearQuery() {
+            document.getElementById('sqlQuery').value = '';
+            document.getElementById('queryResults').innerHTML = '';
+        }
+
+        function showSuccess(div, data) {
+            let html = '<div class="results success">';
+            
+            if (data.data && data.data.length > 0) {
+                html += `<strong>✅ Query executed successfully!</strong><br>`;
+                html += `Found ${data.count} rows<br><br>`;
+                html += createTable(data.data, data.columns);
+            } else {
+                html += `<strong>✅ Query executed successfully!</strong><br>`;
+                html += data.message || `Affected rows: ${data.affected_rows || 0}`;
+            }
+            
+            html += '</div>';
+            div.innerHTML = html;
+        }
+
+        function showError(div, message) {
+            div.innerHTML = `<div class="results error"><strong>❌ Error:</strong><br>${message}</div>`;
+        }
+
+        function showTablesResult(div, data) {
+            let html = '<div class="results success">';
+            html += `<strong>📊 Found ${data.count} tables</strong><br><br>`;
+            
+            if (data.tables.length > 0) {
+                html += '<table>';
+                html += '<thead><tr><th>Table Name</th><th>Schema</th><th>Actions</th></tr></thead>';
+                html += '<tbody>';
+                
+                data.tables.forEach(table => {
+                    html += `<tr>`;
+                    html += `<td>${table.name}</td>`;
+                    html += `<td>${table.schema}</td>`;
+                    html += `<td>
+                        <button onclick="viewTableData('${table.name}')">View Data</button>
+                        <button onclick="viewTableSchema('${table.name}')">View Schema</button>
+                    </td>`;
+                    html += `</tr>`;
+                });
+                
+                html += '</tbody></table>';
+            } else {
+                html += 'No tables found.';
+            }
+            
+            html += '</div>';
+            div.innerHTML = html;
+        }
+
+        function showHealthResult(div, data) {
+            const isHealthy = data.status === 'healthy';
+            const resultClass = isHealthy ? 'success' : 'error';
+            const icon = isHealthy ? '✅' : '❌';
+            
+            let html = `<div class="results ${resultClass}">`;
+            html += `<strong>${icon} Status: ${data.status}</strong><br>`;
+            html += `Database: ${data.database}<br>`;
+            html += `Message: ${data.message}`;
+            if (data.error) {
+                html += `<br>Error: ${data.error}`;
+            }
+            html += '</div>';
+            
+            div.innerHTML = html;
+        }
+
+        function createTable(data, columns) {
+            let html = '<table>';
+            
+            // Headers
+            html += '<thead><tr>';
+            columns.forEach(col => {
+                html += `<th>${col}</th>`;
+            });
+            html += '</tr></thead>';
+            
+            // Body
+            html += '<tbody>';
+            data.forEach(row => {
+                html += '<tr>';
+                columns.forEach(col => {
+                    const value = row[col];
+                    html += `<td>${value !== null && value !== undefined ? value : 'NULL'}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody>';
+            
+            html += '</table>';
+            return html;
+        }
+
+        async function viewTableData(tableName) {
+            const query = `SELECT * FROM ${tableName} LIMIT 50;`;
+            document.getElementById('sqlQuery').value = query;
+            switchTab('query');
+            // Focus on query tab button
+            document.querySelector('.tab').click();
+            await executeQuery();
+        }
+
+        async function viewTableSchema(tableName) {
+            try {
+                const response = await fetch(`/table/${tableName}/schema`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    let schemaInfo = `-- Schema for table: ${tableName}\n`;
+                    schemaInfo += `-- Columns: ${data.count}\n\n`;
+                    
+                    data.columns.forEach(col => {
+                        schemaInfo += `-- ${col.name}: ${col.type}`;
+                        if (col.max_length) schemaInfo += `(${col.max_length})`;
+                        if (!col.nullable) schemaInfo += ` NOT NULL`;
+                        if (col.default) schemaInfo += ` DEFAULT ${col.default}`;
+                        schemaInfo += `\n`;
+                    });
+                    
+                    schemaInfo += `\nSELECT * FROM ${tableName} LIMIT 10;`;
+                    
+                    document.getElementById('sqlQuery').value = schemaInfo;
+                    switchTab('query');
+                    document.querySelector('.tab').click();
+                } else {
+                    alert('Failed to get table schema: ' + (data.error || data.message));
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+
+        // Load tables when tables tab is first opened
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTables();
+        });
+    </script>
+</body>
+</html>
