@@ -34,8 +34,13 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
   bool hasStarted = false;
   String currentTranscript = "";
   String interimTranscript = "";
-  // Timer? _silenceTimer;
-  // bool _hasSpokenDuringSession = false;
+
+  // Add silence detection
+  Timer? _silenceTimer;
+  bool _hasSpokenDuringSession = false;
+  String _lastFinalTranscript = "";
+  static const int _silenceThresholdSeconds =
+      3; // Wait 3 seconds after speech stops
 
   // Animation controllers for visual feedback
   late AnimationController _pulseController;
@@ -100,6 +105,7 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
     _waveController.dispose();
     _audioRecorder.dispose();
     _deepgramListener?.close();
+    _silenceTimer?.cancel();
     widget.flutterTts.stop();
     super.dispose();
   }
@@ -134,7 +140,12 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
         isSpeaking = false;
         currentTranscript = "";
         interimTranscript = "";
+        _hasSpokenDuringSession = false;
+        _lastFinalTranscript = "";
       });
+
+      // Cancel any existing silence timer
+      _silenceTimer?.cancel();
 
       // Close any existing listener first
       await _deepgramListener?.close();
@@ -143,10 +154,12 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
         'model': 'nova-2-general',
         'language': 'fr',
         'smart_format': true,
-        'interim_results': true, // Changed to true for better UI feedback
+        'interim_results': true,
         'encoding': 'linear16',
         'sample_rate': 16000,
         'channels': 1,
+        'endpointing': 300, // Wait 300ms before considering speech ended
+        'utterance_end_ms': 3000, // Wait 3 seconds before ending utterance
       };
 
       try {
@@ -162,17 +175,7 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
         _deepgramListener!.stream.listen(
           (result) {
             if (mounted) {
-              setState(() {
-                if (result.isFinal) {
-                  currentTranscript =
-                      (currentTranscript + " " + (result.transcript ?? ""))
-                          .trim();
-                  interimTranscript = "";
-                  _handleSpeechResult(currentTranscript);
-                } else {
-                  interimTranscript = result.transcript ?? "";
-                }
-              });
+              _handleTranscriptUpdate(result);
             }
           },
           onError: (error) {
@@ -187,6 +190,9 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
 
         await _deepgramListener!.start();
         print('Deepgram listener started.');
+
+        // Start pulse animation when listening
+        _pulseController.repeat(reverse: true);
       } catch (e) {
         print('Error creating Deepgram listener: $e');
         _stopAndResetListening();
@@ -197,8 +203,48 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
     }
   }
 
+  void _handleTranscriptUpdate(result) {
+    setState(() {
+      if (result.isFinal) {
+        // Update the final transcript
+        String newFinalText = result.transcript?.trim() ?? "";
+        if (newFinalText.isNotEmpty) {
+          _hasSpokenDuringSession = true;
+          currentTranscript = (currentTranscript + " " + newFinalText).trim();
+          _lastFinalTranscript = currentTranscript;
+          interimTranscript = "";
+
+          // Start silence timer - wait for user to finish speaking
+          _startSilenceTimer();
+          print('Final transcript updated: $currentTranscript');
+        }
+      } else {
+        // Update interim transcript (real-time)
+        String newInterimText = result.transcript?.trim() ?? "";
+        if (newInterimText.isNotEmpty) {
+          _hasSpokenDuringSession = true;
+          interimTranscript = newInterimText;
+
+          // Cancel silence timer while user is still speaking
+          _silenceTimer?.cancel();
+          print('Interim transcript: $interimTranscript');
+        }
+      }
+    });
+  }
+
+  void _startSilenceTimer() {
+    _silenceTimer?.cancel();
+    _silenceTimer = Timer(Duration(seconds: _silenceThresholdSeconds), () {
+      if (mounted && isListening && _hasSpokenDuringSession) {
+        print('Silence detected, processing response: $_lastFinalTranscript');
+        _handleSpeechResult(_lastFinalTranscript);
+      }
+    });
+  }
+
   void _handleSpeechResult(String transcript) async {
-    if (!mounted) return;
+    if (!mounted || transcript.trim().isEmpty) return;
 
     print('Processing final transcript: $transcript');
     await _stopListening();
@@ -223,6 +269,8 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
 
   Future<void> _stopListening() async {
     _pulseController.stop();
+    _silenceTimer?.cancel();
+
     try {
       if (isListening) {
         await _audioRecorder.stop();
@@ -245,12 +293,16 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
   void _stopAndResetListening() {
     _pulseController.stop();
     _waveController.stop();
+    _silenceTimer?.cancel();
+
     if (mounted) {
       setState(() {
         isListening = false;
         isSpeaking = false;
         currentTranscript = "";
         interimTranscript = "";
+        _hasSpokenDuringSession = false;
+        _lastFinalTranscript = "";
       });
     }
   }
@@ -283,10 +335,19 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
   }
 
   void _skipCurrentQuestion() {
+    _silenceTimer?.cancel();
     if (currentQuestionIndex < widget.accidentQuestions.length - 1) {
       userResponses.add(""); // Add empty response
       currentQuestionIndex++;
       _speakText(widget.accidentQuestions[currentQuestionIndex]);
+    }
+  }
+
+  // Add manual finish button for current response
+  void _finishCurrentResponse() {
+    if (_hasSpokenDuringSession && _lastFinalTranscript.isNotEmpty) {
+      _silenceTimer?.cancel();
+      _handleSpeechResult(_lastFinalTranscript);
     }
   }
 
@@ -466,7 +527,9 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
                     // Status text
                     Text(
                       isListening
-                          ? 'Je vous écoute...'
+                          ? _hasSpokenDuringSession
+                              ? 'Continuez à parler... (arrêt automatique dans ${_silenceThresholdSeconds}s de silence)'
+                              : 'Je vous écoute...'
                           : isSpeaking
                               ? 'Assistant Lumi parle...'
                               : hasStarted
@@ -641,21 +704,26 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
+                    if (isListening && _hasSpokenDuringSession)
+                      ElevatedButton(
+                        onPressed: _finishCurrentResponse,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text('Terminer ma réponse'),
+                      ),
                     if (isListening &&
                         currentQuestionIndex <
                             widget.accidentQuestions.length - 1)
                       TextButton(
                         onPressed: _skipCurrentQuestion,
-                        child: const Text('Passer cette question'),
+                        child: const Text(
+                          'Passer cette question',
+                          style: TextStyle(fontSize: 11),
+                        ),
                       ),
-                    TextButton(
-                      onPressed: () async {
-                        await widget.flutterTts.stop();
-                        await _stopListening();
-                        Navigator.of(context).pop();
-                      },
-                      child: const Text('Annuler'),
-                    ),
                   ],
                 ),
             ],
