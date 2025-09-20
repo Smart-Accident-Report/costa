@@ -4,6 +4,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
 import 'scan_accident_screen.dart';
+import 'voice_interview_screen.dart';
 
 class ConstatScreen extends StatefulWidget {
   const ConstatScreen({super.key});
@@ -30,6 +31,7 @@ class _ConstatScreenState extends State<ConstatScreen>
   int currentQuestionIndex = 0;
   late final AudioRecorder _audioRecorder;
   DeepgramLiveListener? _deepgramListener;
+  bool isDialogActive = false;
 
   List<String> accidentQuestions = [
     "Bonjour ! Je suis votre assistant Lumi. Pouvez-vous me décrire comment l'accident s'est produit ?",
@@ -136,140 +138,168 @@ class _ConstatScreenState extends State<ConstatScreen>
     await flutterTts.setPitch(1.0);
     await flutterTts.setVolume(1.0);
     await flutterTts.setSpeechRate(0.5);
+  }
 
-    // Set TTS completion callback
-    flutterTts.setCompletionHandler(() {
-      setState(() {
+  Future<void> _speakText(
+      String text, Function(VoidCallback) setStateDialog) async {
+    if (!mounted) return;
+    setStateDialog(() {
+      isSpeaking = true;
+      isListening = false;
+    });
+
+    // We can't use the TTS completion handler reliably with dialogs.
+    // Instead, we will rely on a small delay to transition to listening.
+    // This provides a better user experience as well.
+    try {
+      await flutterTts.speak(text);
+      // Wait for a short time after the speaking is complete
+      await Future.delayed(const Duration(milliseconds: 1000));
+    } catch (e) {
+      print('TTS failed to speak: $e');
+    }
+
+    // After speaking, immediately try to start listening.
+    if (mounted) {
+      _startListening(setStateDialog);
+    }
+  }
+
+  Future<void> _startListening(Function(VoidCallback) setStateDialog) async {
+    try {
+      if (!await _audioRecorder.hasPermission()) {
+        print('Microphone permission not granted.');
+        setStateDialog(() {
+          isListening = false;
+          isSpeaking = false;
+        });
+        return;
+      }
+
+      setStateDialog(() {
+        isListening = true;
         isSpeaking = false;
       });
-      // Add a small delay before starting to listen
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (currentQuestionIndex < accidentQuestions.length - 1) {
-          _startListening();
-        }
-      });
-    });
-  }
 
-  Future<void> _speakText(String text) async {
-    setState(() {
-      isSpeaking = true;
-    });
-    await flutterTts.speak(text);
-  }
+      // Close any existing listener first
+      await _deepgramListener?.close();
 
-  Future<void> _startListening() async {
-    try {
-      setState(() {
-        isListening = true;
-      });
+      final sttStreamParams = {
+        'model': 'nova-2-general',
+        'language': 'fr',
+        'smart_format': true,
+        'interim_results': false,
+        'encoding': 'linear16',
+        'sample_rate': 16000,
+        'channels': 1,
+      };
 
-      if (await _audioRecorder.hasPermission()) {
-        // Close any existing listener first
-        await _deepgramListener?.close();
+      try {
+        final micStream = await _audioRecorder.startStream(RecordConfig(
+          encoder: AudioEncoder.pcm16bits,
+          sampleRate: 16000,
+          numChannels: 1,
+        ));
 
-        final sttStreamParams = {
-          'model': 'nova-2-general',
-          'language': 'fr',
-          'smart_format': true,
-          'interim_results': false,
-          'encoding': 'linear16',
-          'sample_rate': 16000,
-          'channels': 1,
-        };
+        _deepgramListener = deepgram.listen
+            .liveListener(micStream, queryParams: sttStreamParams);
 
-        try {
-          final micStream = await _audioRecorder.startStream(RecordConfig(
-            encoder: AudioEncoder.pcm16bits,
-            sampleRate: 16000,
-            numChannels: 1,
-          ));
-
-          _deepgramListener = deepgram.listen
-              .liveListener(micStream, queryParams: sttStreamParams);
-
-          _deepgramListener!.stream.listen(
-            (result) {
-              if (result.isFinal &&
-                  result.transcript != null &&
-                  result.transcript!.isNotEmpty &&
-                  result.transcript!.trim().length > 2) {
-                _handleSpeechResult(result.transcript!);
-              }
-            },
-            onError: (error) {
-              print('Deepgram error: $error');
-              setState(() {
-                isListening = false;
-              });
-            },
-            onDone: () {
-              setState(() {
-                isListening = false;
-              });
-            },
-          );
-
-          await _deepgramListener!.start();
-
-          // Auto-stop listening after 30 seconds
-          Future.delayed(const Duration(seconds: 30), () {
-            if (isListening) {
-              _stopListening();
+        _deepgramListener!.stream.listen(
+          (result) {
+            if (result.isFinal &&
+                result.transcript != null &&
+                result.transcript!.isNotEmpty) {
+              _handleSpeechResult(result.transcript!, setStateDialog);
             }
-          });
-        } catch (e) {
-          print('Error creating Deepgram listener: $e');
-          setState(() {
-            isListening = false;
-          });
-        }
-      } else {
-        print('Microphone permission not granted');
-        setState(() {
-          isListening = false;
+          },
+          onError: (error) {
+            print('Deepgram error: $error');
+            _stopAndResetListening(setStateDialog);
+          },
+          onDone: () {
+            print('Deepgram listener closed.');
+            _stopAndResetListening(setStateDialog);
+          },
+        );
+
+        await _deepgramListener!.start();
+        print('Deepgram listener started.');
+
+        // Auto-stop listening after 30 seconds
+        Future.delayed(const Duration(seconds: 30), () {
+          if (mounted && isListening) {
+            _stopAndResetListening(setStateDialog);
+          }
         });
+      } catch (e) {
+        print('Error creating Deepgram listener: $e');
+        _stopAndResetListening(setStateDialog);
       }
     } catch (e) {
       print('Error during speech recognition setup: $e');
-      setState(() {
-        isListening = false;
-      });
+      _stopAndResetListening(setStateDialog);
+    }
+  }
+
+  void _handleSpeechResult(
+      String transcript, Function(VoidCallback) setStateDialog) async {
+    if (!mounted) return;
+    if (transcript.trim().isEmpty) {
+      return;
+    }
+
+    await _stopListening();
+    userResponses.add(transcript);
+    currentQuestionIndex++;
+    print('User said: $transcript');
+
+    if (currentQuestionIndex < accidentQuestions.length) {
+      if (mounted) {
+        _speakText(accidentQuestions[currentQuestionIndex], setStateDialog);
+      }
+    } else {
+      if (mounted) {
+        setState(() {
+          steps[currentStep].completed = true;
+          isDialogActive = false;
+        });
+        Navigator.of(context).pop();
+        _showInterviewCompletedDialog();
+      }
     }
   }
 
   Future<void> _stopListening() async {
     try {
-      await _audioRecorder.stop();
-      await _deepgramListener?.close();
-      setState(() {
-        isListening = false;
-      });
+      if (isListening) {
+        await _audioRecorder.stop();
+      }
+      if (_deepgramListener != null) {
+        await _deepgramListener?.close();
+      }
     } catch (e) {
       print('Error stopping listening: $e');
     }
   }
 
-  void _handleSpeechResult(String transcript) {
-    // Stop listening immediately
-    _stopListening();
-
-    userResponses.add(transcript);
-    currentQuestionIndex++;
-
-    if (currentQuestionIndex < accidentQuestions.length) {
-      Future.delayed(const Duration(milliseconds: 1000), () {
-        if (mounted) {
-          _speakText(accidentQuestions[currentQuestionIndex]);
-        }
+  void _stopAndResetListening(Function(VoidCallback) setStateDialog) {
+    if (mounted) {
+      setStateDialog(() {
+        isListening = false;
+        isSpeaking = false;
       });
-    } else {
-      // Interview completed
-      setState(() {
-        steps[currentStep].completed = true;
-      });
-      Navigator.of(context).pop();
-      _showInterviewCompletedDialog();
+      // The dialog can be reset here or simply close
+      // and let the user restart the step.
+      // For this case, we close the dialog to prevent a frozen UI
+      // due to an unexpected error or timeout.
+      if (isDialogActive) {
+        Navigator.of(context).pop();
+        // Reset state for next attempt
+        setState(() {
+          currentQuestionIndex = 0;
+          userResponses.clear();
+        });
+      }
     }
   }
 
@@ -376,115 +406,21 @@ class _ConstatScreenState extends State<ConstatScreen>
   }
 
   void _showVoiceInterviewDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setStateDialog) {
-          return AlertDialog(
-            backgroundColor: Theme.of(context).cardColor,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Row(
-              children: [
-                Icon(
-                  Icons.record_voice_over,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 28,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Entretien vocal',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: isListening
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
-                        : isSpeaking
-                            ? Theme.of(context)
-                                .colorScheme
-                                .secondary
-                                .withOpacity(0.2)
-                            : Theme.of(context).cardColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isListening
-                          ? Theme.of(context).colorScheme.primary
-                          : isSpeaking
-                              ? Theme.of(context).colorScheme.secondary
-                              : Theme.of(context).dividerColor,
-                      width: 2,
-                    ),
-                  ),
-                  child: Icon(
-                    isListening
-                        ? Icons.mic
-                        : isSpeaking
-                            ? Icons.volume_up
-                            : Icons.support_agent,
-                    size: 40,
-                    color: isListening
-                        ? Theme.of(context).colorScheme.primary
-                        : isSpeaking
-                            ? Theme.of(context).colorScheme.secondary
-                            : Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  isListening
-                      ? 'Je vous écoute...'
-                      : isSpeaking
-                          ? 'Assistant Lumi parle...'
-                          : 'Prêt à commencer l\'entretien',
-                  style: Theme.of(context).textTheme.bodyLarge,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Question ${currentQuestionIndex + 1} sur ${accidentQuestions.length}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                if (isListening || isSpeaking)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 16),
-                    child: LinearProgressIndicator(),
-                  ),
-              ],
-            ),
-            actions: [
-              if (currentQuestionIndex == 0 && !isListening && !isSpeaking)
-                ElevatedButton(
-                  onPressed: () {
-                    _speakText(accidentQuestions[currentQuestionIndex]);
-                  },
-                  child: const Text('Commencer'),
-                ),
-              TextButton(
-                onPressed: () {
-                  flutterTts.stop();
-                  _deepgramListener?.close();
-                  setState(() {
-                    isListening = false;
-                    isSpeaking = false;
-                    currentQuestionIndex = 0;
-                    userResponses.clear();
-                  });
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Annuler'),
-              ),
-            ],
-          );
-        },
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => VoiceInterviewScreen(
+          deepgram: deepgram,
+          flutterTts: flutterTts,
+          accidentQuestions: accidentQuestions,
+          onInterviewComplete: (responses) {
+            setState(() {
+              userResponses = responses;
+              steps[currentStep].completed = true;
+            });
+            _showInterviewCompletedDialog();
+          },
+        ),
       ),
     );
   }
@@ -805,48 +741,43 @@ class _ConstatScreenState extends State<ConstatScreen>
                   ),
                 ),
                 child: SafeArea(
-                  child:
-
-                      // Main Action Button
-                      Expanded(
-                    child: ElevatedButton(
-                      onPressed: isProcessing ? null : _navigateToStepAction,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
+                  child: ElevatedButton(
+                    onPressed: isProcessing ? null : _navigateToStepAction,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
                       ),
-                      child: isProcessing
-                          ? Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.black,
-                                    ),
+                    ),
+                    child: isProcessing
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.black,
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                const Text('Traitement en cours...'),
-                              ],
-                            )
-                          : Text(
-                              currentStep < steps.length - 1
-                                  ? 'Continuer'
-                                  : 'Soumettre le constat',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
                               ),
+                              const SizedBox(width: 12),
+                              const Text('Traitement en cours...'),
+                            ],
+                          )
+                        : Text(
+                            currentStep < steps.length - 1
+                                ? 'Continuer'
+                                : 'Soumettre le constat',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
-                    ),
+                          ),
                   ),
                 ),
               ),
