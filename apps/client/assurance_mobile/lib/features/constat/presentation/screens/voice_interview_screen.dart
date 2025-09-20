@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:deepgram_speech_to_text/deepgram_speech_to_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -32,6 +34,8 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
   bool hasStarted = false;
   String currentTranscript = "";
   String interimTranscript = "";
+  // Timer? _silenceTimer;
+  // bool _hasSpokenDuringSession = false;
 
   // Animation controllers for visual feedback
   late AnimationController _pulseController;
@@ -102,22 +106,15 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
 
   Future<void> _speakText(String text) async {
     if (!mounted) return;
-
     setState(() {
       isSpeaking = true;
       isListening = false;
-      currentTranscript = "";
-      interimTranscript = "";
     });
-
-    _waveController.repeat();
 
     try {
       await widget.flutterTts.speak(text);
-      print('Started speaking: $text');
     } catch (e) {
       print('TTS failed to speak: $e');
-      // If TTS fails, go directly to listening
       if (mounted) {
         _startListening();
       }
@@ -125,8 +122,6 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
   }
 
   Future<void> _startListening() async {
-    if (!mounted) return;
-
     try {
       if (!await _audioRecorder.hasPermission()) {
         print('Microphone permission not granted.');
@@ -141,9 +136,6 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
         interimTranscript = "";
       });
 
-      _waveController.stop();
-      _pulseController.repeat(reverse: true);
-
       // Close any existing listener first
       await _deepgramListener?.close();
 
@@ -151,14 +143,14 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
         'model': 'nova-2-general',
         'language': 'fr',
         'smart_format': true,
-        'interim_results': true, // Enable interim results for real-time display
+        'interim_results': true, // Changed to true for better UI feedback
         'encoding': 'linear16',
         'sample_rate': 16000,
         'channels': 1,
       };
 
       try {
-        final micStream = await _audioRecorder.startStream(RecordConfig(
+        final micStream = await _audioRecorder.startStream(const RecordConfig(
           encoder: AudioEncoder.pcm16bits,
           sampleRate: 16000,
           numChannels: 1,
@@ -169,25 +161,18 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
 
         _deepgramListener!.stream.listen(
           (result) {
-            print(
-                'Deepgram result: ${result.transcript}, isFinal: ${result.isFinal}');
-
-            if (result.transcript != null &&
-                result.transcript!.trim().isNotEmpty) {
-              if (mounted) {
-                setState(() {
-                  if (result.isFinal) {
-                    currentTranscript = result.transcript!.trim();
-                    interimTranscript = "";
-                  } else {
-                    interimTranscript = result.transcript!.trim();
-                  }
-                });
-              }
-
-              if (result.isFinal) {
-                _handleSpeechResult(result.transcript!.trim());
-              }
+            if (mounted) {
+              setState(() {
+                if (result.isFinal) {
+                  currentTranscript =
+                      (currentTranscript + " " + (result.transcript ?? ""))
+                          .trim();
+                  interimTranscript = "";
+                  _handleSpeechResult(currentTranscript);
+                } else {
+                  interimTranscript = result.transcript ?? "";
+                }
+              });
             }
           },
           onError: (error) {
@@ -202,14 +187,6 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
 
         await _deepgramListener!.start();
         print('Deepgram listener started.');
-
-        // Auto-stop listening after 30 seconds
-        Future.delayed(const Duration(seconds: 30), () {
-          if (mounted && isListening) {
-            print('Auto-stopping listening after 30 seconds');
-            _stopAndResetListening();
-          }
-        });
       } catch (e) {
         print('Error creating Deepgram listener: $e');
         _stopAndResetListening();
@@ -223,7 +200,7 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
   void _handleSpeechResult(String transcript) async {
     if (!mounted) return;
 
-    print('Processing transcript: $transcript');
+    print('Processing final transcript: $transcript');
     await _stopListening();
 
     userResponses.add(transcript);
@@ -256,6 +233,12 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
       }
     } catch (e) {
       print('Error stopping listening: $e');
+    }
+    if (mounted) {
+      setState(() {
+        isListening = false;
+        interimTranscript = "";
+      });
     }
   }
 
@@ -396,7 +379,7 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
                           if (isSpeaking) ...[
                             const SizedBox(width: 8),
                             AnimatedBuilder(
-                              animation: _waveAnimation,
+                              animation: _waveController,
                               builder: (context, child) {
                                 return Icon(
                                   Icons.volume_up,
