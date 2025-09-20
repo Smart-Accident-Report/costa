@@ -250,19 +250,20 @@ class _VoiceInterviewScreenState extends State<VoiceInterviewScreen>
     await _stopListening();
 
     userResponses.add(transcript);
-    currentQuestionIndex++;
 
-    if (currentQuestionIndex < widget.accidentQuestions.length) {
-      // Move to next question
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) {
-        _speakText(widget.accidentQuestions[currentQuestionIndex]);
-      }
-    } else {
-      // Interview completed
+    if (currentQuestionIndex == widget.accidentQuestions.length - 2) {
+      _speakText(widget.accidentQuestions[currentQuestionIndex + 1]);
+
+      await Future.delayed(const Duration(seconds: 3));
       if (mounted) {
         widget.onInterviewComplete(userResponses);
         Navigator.of(context).pop();
+      }
+    } else {
+      currentQuestionIndex++;
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) {
+        _speakText(widget.accidentQuestions[currentQuestionIndex]);
       }
     }
   }
